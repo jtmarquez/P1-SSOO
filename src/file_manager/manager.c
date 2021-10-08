@@ -3,6 +3,39 @@
 #include <string.h> // strtok, strcpy, etc.
 #include <stdlib.h> // malloc, calloc, free, etc.
 
+// Import the header file of this module
+#include "manager.h"
+
+/*
+* Splits a string "str" by a separator "sep", returns an array with The
+* resulting strings. Equivalent to Python's str.split(sep).
+*/
+static char** split_by_sep(char* str, char* sep)
+{
+  char** new_str = calloc(MAX_SPLIT, sizeof(char*));
+  int index = 0;
+
+  char* token = strtok(str, sep);
+  while (token != NULL) {
+    new_str[index] = calloc(BUFFER_SIZE, sizeof(char));
+    strcpy(new_str[index++], token);
+    token = strtok(NULL, sep);
+  }
+
+  return new_str;
+}
+
+/*
+* Reads a generic file with the following structure:
+*
+* 1. n
+* 2. data,data,data,...
+* ...
+* n+1. data,data,data,...
+*
+* Where "n" is the amount of data lines where each of data lines are
+* comma-separated. The file is returned as a InputFile struct.
+*/
 InputFile* read_file(char* filename)
 {
   // Read the file
@@ -46,20 +79,4 @@ void input_file_destroy(InputFile* input_file)
 
   // Free the input_file itself
   free(input_file);
-}
-
-int main(int argc, char **argv)
-{
-  printf("Hello T2!\n");
-  char *input_name;
-  char *output_name;
-  input_name = argv[1];
-  char *filename = input_name;
- 
-  InputFile *file = read_file(filename);
-  
-  struct proceso* array_procesos= calloc(file->len, sizeof(struct proceso));;
-  
-  printf("Reading file of length %i:\n", file->len);
-  printf("\n");
 }
