@@ -17,13 +17,15 @@ unsigned char buffer[5000];
   correspondiente a la memoria.*/
  void cr_mount(char* memory_path)
   {
-    memory_file = fopen(memory_path,"rb");
+    memory_file = malloc(sizeof(FILE));
+    memory_file[0] = *(fopen(memory_path,"rb"));
+    //memory_file = fopen(memory_path,"rb");
   }
 
 
 /* Funcion que muestra en pantalla los procesos en ejecucion.*/
 void cr_ls_processes()
-  {
+  {fseek(memory_file, 0 ,SEEK_SET);
     fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
     int cont = 0;
     int sum = 256;
@@ -38,7 +40,7 @@ void cr_ls_processes()
         }
       cont += sum;
       num +=1;
-    }
+      }
     //printf("%d", buffer[i]);
     }
   }
@@ -46,6 +48,8 @@ void cr_ls_processes()
 Retorna 1 si existe y 0 en caso contrario.*/
 int cr_exists(int process_id, char* file_name)
   {
+    fseek(memory_file, 0 ,SEEK_SET);
+    fread(buffer,sizeof(buffer),1,memory_file);
     int cont = 0;
     int sum = 256;
     int existe = 0;
@@ -88,9 +92,11 @@ int cr_exists(int process_id, char* file_name)
 //Funcion para listar los archivos dentro de la memoria del proceso. 
 //Imprime en pantalla los nombres de todos los archivos presentes en 
 //la memoria del proceso con id process id.
-void cr_ls_files(int process_id)
-{
-int cont = 0;
+
+void cr_ls_files(int process_id){
+    fseek(memory_file, 0 ,SEEK_SET);
+    fread(buffer,sizeof(buffer),1,memory_file);
+    int cont = 0;
     int sum = 256;
 
     for(int i = 0; i<N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
@@ -128,6 +134,88 @@ int cont = 0;
   }
 }
 
+ //Funcion que inicia un proceso con id process id y nombre process name. 
+ //Guarda toda la informacion correspondiente en una entrada en la tabla de PCBs.
+void cr_start_process(int process_id, char* process_name)
+{
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file);
+  int cont = 0;
+  int sum = 256;
+
+  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
+  {
+    if (i == cont){ //si estoy al inicio de una de las entradas
+      if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
+      {
+        char validation[4];
+        int uno = 1;
+        sprintf(validation, "%d", uno);
+        printf("%s \n", validation);
+        fseek(memory_file, i*sizeof(char),SEEK_SET);
+        fwrite(&validation, sizeof(char), 1, memory_file);
+        char pid[4];
+        sprintf(pid, "%d", process_id);
+       // char process_id_ = (char) process_id;
+        printf("%s \n", pid);
+        fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
+        fwrite(&pid, sizeof(char), 1, memory_file);
+        for (int j = 0; j < strlen(process_name); j++)
+        {
+          char letter = (char)process_name[j];
+          printf("%c \n", letter);
+          fseek(memory_file, (i+2+j)*sizeof(char),SEEK_SET);
+          fwrite(&letter, sizeof(char), 1, memory_file);
+        }
+        continue;
+      }
+    cont += sum;
+    }
+  }
+  fclose(memory_file);
+}
+
+void cr_finish_process(int process_id) 
+{
+  int cont = 0;
+  int sum = 256;
+
+  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
+  {
+    if (i == cont){ //si estoy al inicio de una de las entradas
+      if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
+      {
+        if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
+        {
+          buffer[i+1] = 0; //invalido el proceso correspondiente
+          //obtengo al direccion virtual correspondiente al proceso
+        }
+      }
+    cont += sum;
+    }
+  }
+  //obtengo los primeros 5 bits = VPN
+  // ingreso a esa entrada de la tabla de paginas
+  //obtengo el PFN
+  // direccion fisica = PFN + offset
+}
+
+void print_memory(){
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+  int cont = 0;
+  int sum = 256;
+  int num = 1;
+
+  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++){
+    if (i == cont){ 
+        printf("\n [Entrada: %d] \n",num);
+    cont += sum;
+    num +=1;
+    }
+    printf("%d", buffer[i]);
+  }
+}
 
 int main(int argc, char **argv)
 {
@@ -146,6 +234,13 @@ int main(int argc, char **argv)
   printf("\n");
   printf("-------Ejecutando la funcion cr_exists-----------\n");
   printf("\n");
-  cr_exists(200, 000011001100);
+  cr_exists(200, "gato.mp4");
+  printf("\n");
+  print_memory();
+  printf("-------Ejecutando la funcion cr_start-----------\n");
+  printf("\n");
+  cr_start_process(3, "test1");
+  printf("\n");
+  print_memory();
 
 }
