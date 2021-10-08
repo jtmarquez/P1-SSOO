@@ -33,7 +33,7 @@ typedef struct Archivos
 {
     unsigned char validez;
     unsigned char nombre;
-    unsigned char tamaño;
+    unsigned char tamano;
     unsigned char dir_virtual;   
 }CrmsFile;
 
