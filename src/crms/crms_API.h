@@ -5,18 +5,20 @@
 typedef struct Tabla_PCB
 {
     struct Proceso* entradas[16];
-};Tabla_PCB
-
-struct Tabla_Paginas
-{
-    Paginas* paginas[32];
-}tabla_paginas;
+}Tabla_PCB;
 
 typedef struct Paginas
 {
     unsigned char validez;
     unsigned char pfn;
-};Paginas
+}Paginas;
+
+typedef struct Tabla_Paginas
+{
+    Paginas* paginas[32];
+}TablaPaginas;
+
+
 
 struct Frame_bitmap
 {
@@ -27,16 +29,6 @@ struct Frame
 {
     
 };
-
-typedef struct Proceso
-{
-    unsigned char estado;
-    unsigned char id;
-    unsigned char nombre;
-    CrmsFile* archivos[10];
-    tabla_paginas;* Tabla_Paginas;
-}Entrada;
-
 typedef struct Archivos
 {
     unsigned char validez;
@@ -44,3 +36,14 @@ typedef struct Archivos
     unsigned char tamaño;
     unsigned char dir_virtual;   
 }CrmsFile;
+
+typedef struct Proceso
+{
+    unsigned char estado;
+    unsigned char id;
+    unsigned char nombre;
+    CrmsFile* archivos[10];
+    TablaPaginas* T_P;
+
+}Entrada;
+

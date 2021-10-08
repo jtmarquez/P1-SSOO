@@ -5,27 +5,151 @@
 #include <string.h>
 
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "../file_manager/manager.h"
+#include "crms_API.h"
+#include <string.h>
+
+  char *filename;
+  FILE *memory_file;
+  unsigned char buffer[5000];
+
+/*Funcion para montar la memoria.
+  Establece como variable global la ruta local donde se encuentra el archivo .bin 
+  correspondiente a la memoria.*/
+ void cr_mount(char* memory_path)
+  {
+  memory_file = fopen(memory_path,"rb");
+  }
+
+
+/* Funcion que muestra en pantalla los procesos en ejecucion.*/
+void cr_ls_processes()
+  {
+    fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+    int cont = 0;
+    int sum = 256;
+    int num = 1;
+    int aux;
+    for(int i = 0; i<4096; i++){
+      if (i == cont){
+        if (buffer[i] == 1)
+        {
+          aux = i + 1;
+          printf("\n [Entrada: %d, Proceso en ejecucion: %d] \n",num, buffer[aux] );
+        }
+      cont += sum;
+      num +=1;
+    }
+    //printf("%d", buffer[i]);
+    }
+  }
+/* Funcion para ver si un archivo con nombre file name existe en la memoria del proceso con id process id. 
+Retorna 1 si existe y 0 en caso contrario.*/
+int cr_exists(int process_id, char* file_name)
+  {
+    int cont = 0;
+    int sum = 256;
+    int existe = 0;
+
+    for(int i = 0; i<4096; i++)
+    {
+      if (i == cont){ //si estoy al inicio de una de las entradas
+        if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+        {
+          if (buffer[i+1] == process_id) //si es el proceso que busco
+          {
+            //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
+            int inicio = i + 14; //donde empiezan las subentradas de archivos
+            int suma = 21;
+            for (int j=inicio; j<= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
+            {//printf("j es: %d y inicio es %d\n", j, inicio);
+              if (j==inicio) //si estoy al inicio de una subentrada
+                {
+                  //printf("ENTRADA\n");
+                  if (buffer[j] == 1)//si la subentrada es valida
+                  {
+                   for (int k = j; k< j+ 12; k++){printf("%c", buffer[k]);}
+                   printf("\n");
+                  }
+                  
+              inicio += suma;
+                }
+              
+             // printf("%d", buffer[j]);
+            }
+          
+          }
+      
+        }
+    cont += sum;
+    }
+  }
+  return existe;}
+
+//Funcion para listar los archivos dentro de la memoria del proceso. 
+//Imprime en pantalla los nombres de todos los archivos presentes en 
+//la memoria del proceso con id process id.
+void cr_ls_files(int process_id)
+{
+int cont = 0;
+    int sum = 256;
+
+    for(int i = 0; i<4096; i++)
+    {
+      if (i == cont){ //si estoy al inicio de una de las entradas
+        if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+        {
+          if (buffer[i+1] == process_id) //si es el proceso que busco
+          {
+            //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
+            int inicio = i + 14; //donde empiezan las subentradas de archivos
+            int suma = 21;
+            for (int j=inicio; j<= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
+            {//printf("j es: %d y inicio es %d\n", j, inicio);
+              if (j==inicio) //si estoy al inicio de una subentrada
+                {
+                  //printf("ENTRADA\n");
+                  if (buffer[j] == 1)//si la subentrada es valida
+                  {
+                   for (int k = j; k< j+ 12; k++){printf("%c", buffer[k]);}
+                   printf("\n");
+                  }
+                  
+              inicio += suma;
+                }
+              
+             // printf("%d", buffer[j]);
+            }
+          
+          }
+      
+        }
+    cont += sum;
+    }
+  }
+}
+
+
 int main(int argc, char **argv)
 {
   printf("Hello P1!\n");
   char *input_name;
   input_name = argv[1];
-  char *filename = input_name;
-
-  unsigned char buffer[4000];
-  FILE *ptr;
-
-  ptr = fopen(filename,"rb");  // r for read, b for binary
-
-  fread(buffer,sizeof(buffer),1,ptr); // read 10 bytes to our buffer
-
-  char string[12];
-  char bytes[12];
-  for(int i = 0; i<1024; i++){
-   printf("%d",buffer[i]);
-   if (i==255 || i==511 || i==767 || i==1023){
-     printf("\ncambio\n");
-   }
-  }
+  filename = input_name;
+  printf("\n");
+  printf("-------Ejecutando la funcion cr_mount-------\n");
+  printf("\n");
+  cr_mount(filename);
+  printf("\n");
+  printf("-------Ejecutando la funcion cr_ls_processes--------\n");
+  printf("\n");
+  cr_ls_processes();
+  printf("\n");
+  printf("-------Ejecutando la funcion cr_exists-----------\n");
+  printf("\n");
+  cr_exists(200, 000011001100);
 
 }
