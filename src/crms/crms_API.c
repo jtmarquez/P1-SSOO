@@ -1,27 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "../file_manager/manager.h"
 #include <string.h>
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include "../file_manager/manager.h"
 #include "crms_API.h"
-#include <string.h>
 
-  char *filename;
-  FILE *memory_file;
-  unsigned char buffer[5000];
+#define N_ENTRADAS_PCB 16
+#define TAMANO_ENTRADA_PCB 256
+
+char *filename;
+FILE *memory_file;
+unsigned char buffer[5000];
 
 /*Funcion para montar la memoria.
   Establece como variable global la ruta local donde se encuentra el archivo .bin 
   correspondiente a la memoria.*/
  void cr_mount(char* memory_path)
   {
-  memory_file = fopen(memory_path,"rb");
+    memory_file = fopen(memory_path,"rb");
   }
 
 
@@ -33,7 +29,7 @@ void cr_ls_processes()
     int sum = 256;
     int num = 1;
     int aux;
-    for(int i = 0; i<4096; i++){
+    for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++){
       if (i == cont){
         if (buffer[i] == 1)
         {
@@ -54,7 +50,7 @@ int cr_exists(int process_id, char* file_name)
     int sum = 256;
     int existe = 0;
 
-    for(int i = 0; i<4096; i++)
+    for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
     {
       if (i == cont){ //si estoy al inicio de una de las entradas
         if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
@@ -64,7 +60,7 @@ int cr_exists(int process_id, char* file_name)
             //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
             int inicio = i + 14; //donde empiezan las subentradas de archivos
             int suma = 21;
-            for (int j=inicio; j<= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
+            for (int j=inicio; j <= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
             {//printf("j es: %d y inicio es %d\n", j, inicio);
               if (j==inicio) //si estoy al inicio de una subentrada
                 {
@@ -97,7 +93,7 @@ void cr_ls_files(int process_id)
 int cont = 0;
     int sum = 256;
 
-    for(int i = 0; i<4096; i++)
+    for(int i = 0; i<N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
     {
       if (i == cont){ //si estoy al inicio de una de las entradas
         if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
