@@ -64,25 +64,24 @@ int cr_exists(int process_id, char* file_name)
             {//printf("j es: %d y inicio es %d\n", j, inicio);
               if (j==inicio) //si estoy al inicio de una subentrada
                 {
-                  //printf("ENTRADA\n");
+                  existe = 1;
                   if (buffer[j] == 1)//si la subentrada es valida
                   {
-                   for (int k = j; k< j+ 12; k++){printf("%c", buffer[k]);}
-                   printf("\n");
-                  }
-                  
+                  int cont_filename = 0;
+                  for (int k = j; k< j+ 12; k++){
+                    if (file_name[cont_filename]!= buffer[k+1]){existe = 0;}
+                    cont_filename += 1;
+                    } if (existe == 1){return existe; }
+                  }   
               inicio += suma;
-                }
-              
-             // printf("%d", buffer[j]);
+                } 
             }
-          
-          }
-      
+          } 
         }
     cont += sum;
     }
   }
+  existe = 0;
   return existe;}
 
 //Funcion para listar los archivos dentro de la memoria del proceso. 
@@ -110,7 +109,7 @@ int cont = 0;
                   //printf("ENTRADA\n");
                   if (buffer[j] == 1)//si la subentrada es valida
                   {
-                   for (int k = j; k< j+ 12; k++){printf("%c", buffer[k]);}
+                   for (int k = j; k<= j+ 12; k++){printf("%c", buffer[k]);}
                    printf("\n");
                   }
                   
@@ -146,6 +145,12 @@ int main(int argc, char **argv)
   printf("\n");
   printf("-------Ejecutando la funcion cr_exists-----------\n");
   printf("\n");
-  cr_exists(200, 000011001100);
+  int existe = cr_exists(200, "hecomes.mp4");
+  if (existe == 1){printf("El archivo SI esta almacenado en el proceso\n ");}
+  else {printf("El archivo NO esta almacenado en el proceso\n ");}
+  printf("\n");
+  printf("-------Ejecutando la funcion cr__ls_files-----------\n");
+  printf("\n");
+  cr_ls_files(200);
 
 }
