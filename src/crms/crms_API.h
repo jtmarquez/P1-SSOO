@@ -32,9 +32,9 @@ struct Frame
 typedef struct Archivos
 {
     unsigned char validez;
-    unsigned char nombre;
-    unsigned char tamano;
-    unsigned char dir_virtual;   
+    unsigned char * nombre;
+    unsigned char * tamano;
+    unsigned char * dir_virtual;   
 }CrmsFile;
 
 typedef struct Proceso
