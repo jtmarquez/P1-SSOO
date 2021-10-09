@@ -147,29 +147,30 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
                     // Si no hay errores (nombres iguales y pid iguales, entonces es el archivo buscado)
                     // Se escribe info en struct.
                     asignado = 1;
-                    /* archivo ->nombre = malloc(12 * sizeof(unsigned char));
+                    archivo -> nombre = malloc(12 * sizeof(unsigned char));
                     base = j;
                     limit = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
                     archivo -> validez = buffer[base];
-                    for (int k = base, i_file = 0; k <= limit; k++, i_file++){
-                      archivo ->nombre[i_file] = buffer[k + 1]; 
+                    for (int k = base, i_file = 0; i_file < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO && k <= limit; k++, i_file++){
+                      archivo ->nombre[i_file] = buffer[k + 1];
                     }
                     archivo -> dir_virtual = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL* sizeof(unsigned char));
                     base = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
                     limit = base + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL;
-                    for (int k = base, dir_counter = 0; i < limit; i++, dir_counter++)
+                    for (int k = base, dir_counter = 0; i < limit && dir_counter < TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; i++, dir_counter++)
                     {
                       archivo -> dir_virtual[dir_counter] = buffer[k + 1];
                     }
                     archivo -> tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO* sizeof(unsigned char));
                     base = j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
                     limit = base + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
-                    for (int k = base, dir_counter = 0; i < limit; i++, dir_counter++)
+                    for (int k = base, dir_counter = 0; i < limit && dir_counter < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; i++, dir_counter++)
                     {
                       archivo -> tamano[dir_counter] = buffer[k + 1];
                     }
-                    return archivo;  */
                     printf("ARCHIVO POR LEER ENCONTRADO\n");
+                    return archivo;
+                    
                   }
                   else if (!errores && (mode == 'w')){
                     asignado = 1;
@@ -186,15 +187,27 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   if (!asignado && (mode == 'r')){
     printf("Error de lectura: el archivo con nombre %s no pudo ser encontrado en el proceso %d\n", file_name, process_id);
   }
+  // ver lo del null terminator.
   else if ((!asignado) && (mode == 'w')) {
     // crear archivo
+    archivo ->nombre = (unsigned char) file_name;
+    archivo ->validez = 1;
+    archivo ->tamano = 0;
+    /* archivo ->dir_virtual */
+    // Añadir direccion virtual
     printf("SE CREO EL ARCHIVO REQUERIDO\n");
   }
   else if (asignado && (mode == 'w')){
     printf("Error: El archivo que intenas escribir ya existe\n");
   }
 }
-
+int liberar_memoria_archivo(CrmsFile * archivo) {
+  free(archivo ->nombre);
+  free(archivo ->dir_virtual);
+  free(archivo ->tamano);
+  free(archivo);
+  return 1;
+}
 int main(int argc, char **argv)
 {
   printf("Hello P1!\n");
@@ -219,5 +232,7 @@ int main(int argc, char **argv)
   printf("-------Ejecutando la funcion cr__ls_files-----------\n");
   printf("\n");
   cr_ls_files(200);
-  cr_open(200, "greatcat.mp4", 'r');
+  printf("-------Ejecutando la funcion cr_open-----------\n");
+  CrmsFile * archivo = cr_open(200, "a.mp4", 'w');
+  /* liberar_memoria_archivo(archivo); */
 }
