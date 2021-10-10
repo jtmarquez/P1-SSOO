@@ -194,18 +194,37 @@ void cr_start_process(int process_id, char* process_name)
 
 void cr_finish_process(int process_id) 
 {
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file);
   int cont = 0;
   int sum = 256;
 
   for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
   {
     if (i == cont){ //si estoy al inicio de una de las entradas
-      if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
+      if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
       {
         if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
         {
-          buffer[i+1] = 0; //invalido el proceso correspondiente
-          //obtengo al direccion virtual correspondiente al proceso
+          printf("\nENTREEEEEEEEE\n");
+          char validation[4];
+          sprintf(validation, "%d", 0);
+          char validation_char = (char) validation;
+          fseek(memory_file, i*sizeof(char),SEEK_SET);
+          fwrite(&validation_char, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
+          char pid[4];
+          sprintf(pid, "%d", 0);
+          char pid_char = (char) pid;
+          fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
+          fwrite(&pid_char, sizeof(char), 1, memory_file);
+          for (int j = 0; j < 12; j++)
+            {
+              char letter[4];
+              sprintf(letter, "%d", 0);
+              char letter_char = (char) letter;
+              fseek(memory_file, (i+2+j)*sizeof(char),SEEK_SET);
+              fwrite(&letter_char, sizeof(char), 1, memory_file);
+            }
         }
       }
     cont += sum;
@@ -264,6 +283,10 @@ int main(int argc, char **argv)
   printf("\n");
   cr_start_process(3, "test1");
   printf("\n");
+  print_memory(filename);
+  printf("-------Ejecutando la funcion cr_finish-----------\n");
+  printf("\n");
+  cr_finish_process(3);
   print_memory(filename);
 
 }
