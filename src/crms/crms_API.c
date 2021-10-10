@@ -18,7 +18,7 @@ unsigned char buffer[5000];
  void cr_mount(char* memory_path)
   {
     memory_file = malloc(sizeof(FILE));
-    memory_file[0] = *(fopen(memory_path,"rb"));
+    memory_file[0] = *(fopen(memory_path,"rb+"));
     //memory_file = fopen(memory_path,"rb");
   }
 
@@ -148,18 +148,22 @@ void cr_start_process(int process_id, char* process_name)
     if (i == cont){ //si estoy al inicio de una de las entradas
       if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
       {
+        printf("encontre la entrada %d vacia\n", cont/256);
         char validation[4];
         int uno = 1;
         sprintf(validation, "%d", uno);
         printf("%s \n", validation);
+        char validation_char = (char) validation;
+
         fseek(memory_file, i*sizeof(char),SEEK_SET);
-        fwrite(&validation, sizeof(char), 1, memory_file);
+        fwrite(&validation_char, sizeof(char), 1, memory_file);
+
         char pid[4];
         sprintf(pid, "%d", process_id);
-       // char process_id_ = (char) process_id;
+        char pid_char = (char) pid;
         printf("%s \n", pid);
         fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
-        fwrite(&pid, sizeof(char), 1, memory_file);
+        fwrite(&pid_char, sizeof(char), 1, memory_file);
         for (int j = 0; j < strlen(process_name); j++)
         {
           char letter = (char)process_name[j];
@@ -200,7 +204,8 @@ void cr_finish_process(int process_id)
   // direccion fisica = PFN + offset
 }
 
-void print_memory(){
+void print_memory(char* filename){
+  cr_mount(filename);
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
   int cont = 0;
@@ -236,11 +241,11 @@ int main(int argc, char **argv)
   printf("\n");
   cr_exists(200, "gato.mp4");
   printf("\n");
-  print_memory();
+  print_memory(filename);
   printf("-------Ejecutando la funcion cr_start-----------\n");
   printf("\n");
   cr_start_process(3, "test1");
   printf("\n");
-  print_memory();
+  print_memory(filename);
 
 }
