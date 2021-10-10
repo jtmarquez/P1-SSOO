@@ -162,21 +162,22 @@ void cr_start_process(int process_id, char* process_name)
       if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
       {
         printf("encontre la entrada %d vacia\n", cont/256);
-        char validation[4];
         int uno = 1;
-        sprintf(validation, "%d", uno);
-        printf("%s \n", validation);
-        char validation_char = (char) validation;
+        // char validation[4];
+        // NO FUNCIONA ESCRIBIENDO CON CHAR
+        // sprintf(validation, "%d", uno);
+        // printf("%s \n", validation);
+        // char validation_char = (char) validation;
 
         fseek(memory_file, i*sizeof(char),SEEK_SET);
-        fwrite(&validation_char, sizeof(char), 1, memory_file);
+        fwrite(&uno, sizeof(char), 1, memory_file);
 
-        char pid[4];
-        sprintf(pid, "%d", process_id);
-        char pid_char = (char) pid;
-        printf("%s \n", pid);
+        // char pid[4];
+        // sprintf(pid, "%d", process_id);
+        // char pid_char = (char) pid;
+        // printf("%s \n", pid);
         fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
-        fwrite(&pid_char, sizeof(char), 1, memory_file);
+        fwrite(&process_id, sizeof(char), 1, memory_file);
         for (int j = 0; j < strlen(process_name); j++)
         {
           char letter = (char)process_name[j];
@@ -198,32 +199,35 @@ void cr_finish_process(int process_id)
   fread(buffer,sizeof(buffer),1,memory_file);
   int cont = 0;
   int sum = 256;
+  int cero = 0;
 
   for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
   {
     if (i == cont){ //si estoy al inicio de una de las entradas
+      printf("\nvalidez %d\n", buffer[i]);
+      printf("\nid %d\n", buffer[i+1]);
       if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
       {
         if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
         {
           printf("\nENTREEEEEEEEE\n");
-          char validation[4];
-          sprintf(validation, "%d", 0);
-          char validation_char = (char) validation;
+          // char validation[4];
+          // sprintf(validation, "%d", 0);
+          // char validation_char = (char) validation;
           fseek(memory_file, i*sizeof(char),SEEK_SET);
-          fwrite(&validation_char, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
-          char pid[4];
-          sprintf(pid, "%d", 0);
-          char pid_char = (char) pid;
+          fwrite(&cero, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
+          // char pid[4];
+          // sprintf(pid, "%d", 0);
+          // char pid_char = (char) pid;
           fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
-          fwrite(&pid_char, sizeof(char), 1, memory_file);
+          fwrite(&cero, sizeof(char), 1, memory_file);
           for (int j = 0; j < 12; j++)
             {
-              char letter[4];
-              sprintf(letter, "%d", 0);
-              char letter_char = (char) letter;
+              // char letter[4];
+              // sprintf(letter, "%d", 0);
+              // char letter_char = (char) letter;
               fseek(memory_file, (i+2+j)*sizeof(char),SEEK_SET);
-              fwrite(&letter_char, sizeof(char), 1, memory_file);
+              fwrite(&cero, sizeof(char), 1, memory_file);
             }
         }
       }
