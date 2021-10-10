@@ -31,7 +31,9 @@ unsigned char buffer[5000];
 void cr_ls_processes()
   {fseek(memory_file, 0 ,SEEK_SET);
     fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+    int cont = 0;
     int num = 1;
+    int sum = 256;
     int aux;
     for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB){
       if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
@@ -108,31 +110,42 @@ void cr_ls_files(int process_id){
     int cont = 0;
     int sum = 256;
 
-    for(int i = 0; i<N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
+    for(int i = 0; i<4096; i++)
     {
       if (i == cont){ //si estoy al inicio de una de las entradas
         if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
-
         {
-          //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
-          int inicio = i + 14; //donde empiezan las subentradas de archivos
-          for (int j = inicio; j <= (i + 14 + 210); j += TAMANO_SUBENTRADA_PCB) //10 entradas de 21 bits cada una
-          {//printf("j es: %d y inicio es %d\n", j, inicio);
-            if ((j - inicio) == 0 || !((j - inicio) % TAMANO_SUBENTRADA_PCB)) //si estoy al inicio de una subentrada
-              {
-                //printf("ENTRADA\n");
-                if (buffer[j] == 1)//si la subentrada es valida
+          if (buffer[i+1] == process_id) //si es el proceso que busco
+          {
+            //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
+            int inicio = i + 14; //donde empiezan las subentradas de archivos
+            int suma = 21;
+            for (int j=inicio; j<= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
+            {//printf("j es: %d y inicio es %d\n", j, inicio);
+              if (j==inicio) //si estoy al inicio de una subentrada
                 {
-                  for (int k = j; k<= j+ 12; k++){printf("%c", buffer[k]);}
-                  printf("\n");
-                } 
-              }
+                  //printf("ENTRADA\n");
+                  if (buffer[j] == 1)//si la subentrada es valida
+                  {
+                   for (int k = j; k<= j+ 12; k++){printf("%c", buffer[k]);}
+                   printf("\n");
+                  }
+                  
+              inicio += suma;
+                }
+              
+             // printf("%d", buffer[j]);
+            }
+          
           }
+      
         }
-      }
+    cont += sum;
     }
   }
 }
+
+
 
  //Funcion que inicia un proceso con id process id y nombre process name. 
  //Guarda toda la informacion correspondiente en una entrada en la tabla de PCBs.
@@ -237,10 +250,14 @@ int main(int argc, char **argv)
   printf("\n");
   cr_ls_processes();
   printf("\n");
+  printf("\n");
+  printf("-------Ejecutando la funcion cr_ls_files-----------\n");
+  cr_ls_files(200);
   printf("-------Ejecutando la funcion cr_exists-----------\n");
   printf("\n");
-
-  cr_exists(200, "gato.mp4");
+  int existe = cr_exists(200, "greatcat.mp4");
+  if (existe){printf("si existe\n");}
+  else{printf("no existe\n");}
   printf("\n");
   print_memory(filename);
   printf("-------Ejecutando la funcion cr_start-----------\n");
