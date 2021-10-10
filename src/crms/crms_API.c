@@ -118,7 +118,27 @@ void cr_ls_files(int process_id)
     }
   }
 }
-
+unsigned char * buscar_primer_espacio_vacio_pcb(int process_id) {
+  unsigned char * virtual_dir;
+  for (int i = 0; i < TAMANO_ENTRADA_PCB* N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
+  {
+    if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
+      if ((buffer[i + 1] == process_id) && (buffer[i])){
+        int inicio = i + 14;
+        for (int k = inicio; k < (i + 14 + 210); k += TAMANO_SUBENTRADA_PCB)
+        {
+          if (((k - inicio) == 0) || !((k - inicio) % (TAMANO_SUBENTRADA_PCB))){
+            virtual_dir = malloc(4 * sizeof(unsigned char));
+            for(int j = 0; j < 4; j++) virtual_dir[j] = buffer[k + j + 16];
+            printf("Se encontró exitosamente una dirección virtual no ocupada para el archivo\n");
+            return virtual_dir;
+          }
+        }
+      }
+    }
+  }
+  printf("Error: No se encontraron espacios libres para el proceso %d para crear un archivo en él\n", process_id);
+}
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
   int asignado = 0;
@@ -195,7 +215,9 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
     archivo ->tamano = 0;
     /* archivo ->dir_virtual */
     // Añadir direccion virtual
+    archivo ->dir_virtual = buscar_primer_espacio_vacio_pcb(process_id);
     printf("SE CREO EL ARCHIVO REQUERIDO\n");
+    return archivo;
   }
   else if (asignado && (mode == 'w')){
     printf("Error: El archivo que intenas escribir ya existe\n");
