@@ -94,7 +94,6 @@ int cr_exists(int process_id, char* file_name)
 //la memoria del proceso con id process id.
 void cr_ls_files(int process_id)
 {
-  int limit, base;
   for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB)
   {
     if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){ //si estoy al inicio de una de las entradas (i mod 256 = 0)
@@ -130,7 +129,6 @@ void cr_ls_files(int process_id)
 }
 // Retorna indice de primera subentrada vacia de PCB para un proceso process_id
 int buscar_primer_espacio_vacio_pcb(int process_id) {
-  unsigned char * virtual_dir;
   for (int i = 0; i < TAMANO_ENTRADA_PCB* N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
   {
     if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
@@ -183,7 +181,6 @@ int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
 
 void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre){
   char validation[4];
-  int uno = 1;
   sprintf(validation, "%d", archivo ->validez);
   printf("%s\n", validation);
 
@@ -194,16 +191,11 @@ void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_l
   // Escribir nombre de crmsfile a archivo .bin
   for (int idx_nombre = 0; idx_nombre < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; idx_nombre++)
   {
-    fseek(memory_file, 1 ,SEEK_CUR);
-    fwrite(&(archivo -> nombre[idx_nombre]), 1, 1, memory_file);
+    fwrite(&(archivo -> nombre[idx_nombre]), sizeof(char), 1, memory_file);
   }
   // Escribir tamaño 0
-  /* char tamano[4];
-  sprintf(tamano, "%d", archivo ->tamano);
-  printf("%s\n", tamano); */
   for (int idx_tamano = 0; idx_tamano < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; idx_tamano++)
   {
-    fseek(memory_file, sizeof(char) ,SEEK_CUR);
     fwrite(&(archivo ->tamano), sizeof(char), 1, memory_file);
   }
   fclose(memory_file);
@@ -219,13 +211,12 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   for (int i = 0; i < TAMANO_ENTRADA_PCB * N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
   {
     int errores = 0;
-    int base, limit;
+
     if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
       if (buffer[i] && buffer[i + 1] == process_id){
-        //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
         int inicio = i + 14; //donde empiezan las subentradas de archivos
         for (int j = inicio; j <= (i + 14 + 210); j += TAMANO_SUBENTRADA_PCB) //10 entradas de 21 bits cada una
-          {//printf("j es: %d y inicio es %d\n", j, inicio);
+          {
             if ((j - inicio) == 0 || !((j - inicio) % TAMANO_SUBENTRADA_PCB)) //si estoy al inicio de una subentrada
               {
                 //printf("ENTRADA\n");
@@ -237,15 +228,17 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
                       errores += 1;
                     }
                   }
+                  
                   if (!errores && (mode == 'r')) {
                     // Si no hay errores (nombres iguales y pid iguales, entonces es el archivo buscado)
                     // Se escribe info en struct.
+
                     asignado = 1;
                     guardar_info_subentrada_a_struct(archivo, j);
-                    printf("ARCHIVO POR LEER ENCONTRADO\n");
+                    printf("Se encontró exitosamente el archivo a leer\n");
                     return archivo;
-                    
                   }
+
                   else if (!errores && (mode == 'w')){
                     asignado = 1;
                   }
@@ -262,14 +255,16 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
     printf("Error de lectura: el archivo con nombre %s no pudo ser encontrado en el proceso %d\n", file_name, process_id);
     free(archivo);
   }
-  // ver lo del null terminator.
+
   else if (asignado && (mode == 'w')){
     printf("Error: El archivo que intenas escribir ya existe\n");
     free(archivo);
   }
+
   else if ((!asignado) && (mode == 'w')) {
     // crear archivo
     int idx_primer_indice_libre = buscar_primer_espacio_vacio_pcb(process_id);
+
     if (!idx_primer_indice_libre) {
       printf("Error, no se encontró subentradas libres para ese proceso\n");
       free(archivo);
@@ -285,20 +280,12 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       // guardar validez y tamaño
       archivo ->validez = 1;
       archivo ->tamano = 0;
-      // Añadir direccion virtual
-      /* unsigned char * virtual_dir = malloc(4 * sizeof(unsigned char)); */
-      archivo ->dir_virtual = malloc(4 * sizeof(unsigned char));
-      // verificar este indice de inicio
-      for(int j = 1; j <= 4; j++) {
-        /* virtual_dir[j - 1] = buffer[idx_primer_indice_libre + j + 16];
-        printf("%i-", buffer[idx_primer_indice_libre + j + 16]); */
-        archivo ->dir_virtual[j-1] = 9;
-      }
-      /* archivo ->dir_virtual = virtual_dir; */
+      // FALTA AÑADIR DIRECCION VIRTUAL
+
       guardar_info_new_file_a_archivo(archivo, idx_primer_indice_libre);
-      printf("SE CREO EL ARCHIVO REQUERIDO\n");
+
+      printf("Se creó exitosamente el archivo con nombre %s\n", archivo ->nombre);
       return archivo;
-      printf("SE CREO EL ARCHIVO REQUERIDO\n");
     }
     
   }
