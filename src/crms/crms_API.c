@@ -11,6 +11,7 @@
 #define TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO 12
 #define TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO 4
 #define TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL 4 
+
 char *filename;
 FILE *memory_file;
 unsigned char buffer[5000];
@@ -18,10 +19,11 @@ unsigned char buffer[5000];
 /*Funcion para montar la memoria.
   Establece como variable global la ruta local donde se encuentra el archivo .bin 
   correspondiente a la memoria.*/
+
 void cr_mount(char* memory_path)
  {
     memory_file = malloc(sizeof(FILE));
-    memory_file[0] = *(fopen(memory_path,"rb+"));
+    memory_file = (fopen(memory_path,"rb+"));
  }
 
 
@@ -192,8 +194,8 @@ void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_l
   // Escribir nombre de crmsfile a archivo .bin
   for (int idx_nombre = 0; idx_nombre < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; idx_nombre++)
   {
-    fseek(memory_file, sizeof(char) ,SEEK_CUR);
-    fwrite(&(archivo -> nombre[idx_nombre]), sizeof(char), 1, memory_file);
+    fseek(memory_file, 1 ,SEEK_CUR);
+    fwrite(&(archivo -> nombre[idx_nombre]), 1, 1, memory_file);
   }
   // Escribir tamaño 0
   /* char tamano[4];
@@ -334,6 +336,6 @@ int main(int argc, char **argv)
   printf("\n");
   cr_ls_files(200);
   printf("-------Ejecutando la funcion cr_open-----------\n");
-  /* CrmsFile * archivo = cr_open(200, "badcat.mp4", 'w'); */
+  CrmsFile * archivo = cr_open(200, "badcat.mp4", 'w');
   /* liberar_memoria_archivo(archivo); */
 }
