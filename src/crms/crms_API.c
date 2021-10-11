@@ -20,13 +20,15 @@ unsigned char buffer[5000];
   correspondiente a la memoria.*/
 void cr_mount(char* memory_path)
  {
-   memory_file = fopen(memory_path,"rb");
+    memory_file = malloc(sizeof(FILE));
+    memory_file[0] = *(fopen(memory_path,"rb+"));
  }
 
 
 /* Funcion que muestra en pantalla los procesos en ejecucion.*/
 void cr_ls_processes()
   {
+    fseek(memory_file, 0 ,SEEK_SET);
     fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
     int num = 1;
     int aux;
@@ -35,7 +37,7 @@ void cr_ls_processes()
         if (buffer[i] == 1)
         {
           aux = i + 1;
-          printf("\n [Entrada: %d, Proceso en ejecucion: %d] \n",num, buffer[aux] );
+          printf("\n [Entrada: %d, Proceso en ejecucion: %d] \n",num, buffer[aux]);
         }
         num +=1;
       }
@@ -110,6 +112,12 @@ void cr_ls_files(int process_id)
                   printf("%d\n", buffer[j]);
                   for (int k = j; k <= j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; k++){printf("%c", buffer[k]);}
                   printf("\n");
+                  for (int l = j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; l < j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; l++)
+                  {
+                    printf("%u", buffer[l]);
+                  }
+                  
+                  printf("\n");
                 } 
               }
           }
@@ -118,7 +126,8 @@ void cr_ls_files(int process_id)
     }
   }
 }
-unsigned char * buscar_primer_espacio_vacio_pcb(int process_id) {
+// Retorna indice de primera subentrada vacia de PCB para un proceso process_id
+int buscar_primer_espacio_vacio_pcb(int process_id) {
   unsigned char * virtual_dir;
   for (int i = 0; i < TAMANO_ENTRADA_PCB* N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
   {
@@ -128,18 +137,81 @@ unsigned char * buscar_primer_espacio_vacio_pcb(int process_id) {
         for (int k = inicio; k < (i + 14 + 210); k += TAMANO_SUBENTRADA_PCB)
         {
           if (((k - inicio) == 0) || !((k - inicio) % (TAMANO_SUBENTRADA_PCB))){
-            virtual_dir = malloc(4 * sizeof(unsigned char));
-            for(int j = 0; j < 4; j++) virtual_dir[j] = buffer[k + j + 16];
-            printf("Se encontró exitosamente una dirección virtual no ocupada para el archivo\n");
-            return virtual_dir;
+            if (!buffer[k]){
+              printf("Se encontró exitosamente una subentrada no ocupada para el archivo en el proceso %d\n", process_id);
+              printf("%d\n", buffer[k]);
+              return k;
+            }
           }
         }
       }
     }
   }
   printf("Error: No se encontraron espacios libres para el proceso %d para crear un archivo en él\n", process_id);
+  return 0;
 }
+int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
+  int base, limit;
+
+  archivo -> nombre = malloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO * sizeof(unsigned char));
+  base = j;
+  limit = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
+  archivo -> validez = buffer[base];
+  for (int k = base, i_file = 0; i_file < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO && k <= limit; k++, i_file++){
+    archivo ->nombre[i_file] = buffer[k + 1];
+  }
+
+  archivo -> dir_virtual = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL* sizeof(unsigned char));
+  base = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
+  limit = base + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL;
+  for (int k = base, dir_counter = 0; k < limit && dir_counter < TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; k++, dir_counter++)
+  {
+    archivo -> dir_virtual[dir_counter] = buffer[k + 1];
+  }
+
+  archivo -> tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO* sizeof(unsigned char));
+  base = j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
+  limit = base + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
+  for (int k = base, dir_counter = 0; k < limit && dir_counter < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; k++, dir_counter++)
+  {
+    archivo -> tamano[dir_counter] = buffer[k + 1];
+  }
+  return 1;
+}
+
+void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre){
+  char validation[4];
+  int uno = 1;
+  sprintf(validation, "%d", archivo ->validez);
+  printf("%s\n", validation);
+
+  // Escribir byte de validez.
+  fseek(memory_file, (idx_primer_indice_libre) * sizeof(char) ,SEEK_SET);
+  fwrite(&validation, sizeof(char), 1, memory_file);
+
+  // Escribir nombre de crmsfile a archivo .bin
+  for (int idx_nombre = 0; idx_nombre < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; idx_nombre++)
+  {
+    fseek(memory_file, sizeof(char) ,SEEK_CUR);
+    fwrite(&(archivo -> nombre[idx_nombre]), sizeof(char), 1, memory_file);
+  }
+  // Escribir tamaño 0
+  /* char tamano[4];
+  sprintf(tamano, "%d", archivo ->tamano);
+  printf("%s\n", tamano); */
+  for (int idx_tamano = 0; idx_tamano < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; idx_tamano++)
+  {
+    fseek(memory_file, sizeof(char) ,SEEK_CUR);
+    fwrite(&(archivo ->tamano), sizeof(char), 1, memory_file);
+  }
+  fclose(memory_file);
+}
+
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
+  if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO) {
+    printf("Error: El nombre de archivo ingresado supera los 12 bytes");
+    return;
+  }
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
   int asignado = 0;
   for (int i = 0; i < TAMANO_ENTRADA_PCB * N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
@@ -167,27 +239,7 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
                     // Si no hay errores (nombres iguales y pid iguales, entonces es el archivo buscado)
                     // Se escribe info en struct.
                     asignado = 1;
-                    archivo -> nombre = malloc(12 * sizeof(unsigned char));
-                    base = j;
-                    limit = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
-                    archivo -> validez = buffer[base];
-                    for (int k = base, i_file = 0; i_file < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO && k <= limit; k++, i_file++){
-                      archivo ->nombre[i_file] = buffer[k + 1];
-                    }
-                    archivo -> dir_virtual = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL* sizeof(unsigned char));
-                    base = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
-                    limit = base + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL;
-                    for (int k = base, dir_counter = 0; i < limit && dir_counter < TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; i++, dir_counter++)
-                    {
-                      archivo -> dir_virtual[dir_counter] = buffer[k + 1];
-                    }
-                    archivo -> tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO* sizeof(unsigned char));
-                    base = j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
-                    limit = base + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
-                    for (int k = base, dir_counter = 0; i < limit && dir_counter < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; i++, dir_counter++)
-                    {
-                      archivo -> tamano[dir_counter] = buffer[k + 1];
-                    }
+                    guardar_info_subentrada_a_struct(archivo, j);
                     printf("ARCHIVO POR LEER ENCONTRADO\n");
                     return archivo;
                     
@@ -206,23 +258,50 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   }
   if (!asignado && (mode == 'r')){
     printf("Error de lectura: el archivo con nombre %s no pudo ser encontrado en el proceso %d\n", file_name, process_id);
+    free(archivo);
   }
   // ver lo del null terminator.
-  else if ((!asignado) && (mode == 'w')) {
-    // crear archivo
-    archivo ->nombre = (unsigned char) file_name;
-    archivo ->validez = 1;
-    archivo ->tamano = 0;
-    /* archivo ->dir_virtual */
-    // Añadir direccion virtual
-    archivo ->dir_virtual = buscar_primer_espacio_vacio_pcb(process_id);
-    printf("SE CREO EL ARCHIVO REQUERIDO\n");
-    return archivo;
-  }
   else if (asignado && (mode == 'w')){
     printf("Error: El archivo que intenas escribir ya existe\n");
+    free(archivo);
+  }
+  else if ((!asignado) && (mode == 'w')) {
+    // crear archivo
+    int idx_primer_indice_libre = buscar_primer_espacio_vacio_pcb(process_id);
+    if (!idx_primer_indice_libre) {
+      printf("Error, no se encontró subentradas libres para ese proceso\n");
+      free(archivo);
+    }
+    else {
+      // Guardar nombre de file_name a struct archivo
+      archivo ->nombre = calloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO, sizeof(unsigned char));
+      for (int i = 0; i < strlen(file_name) && i < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; i++)
+      {
+        archivo ->nombre[i] = (unsigned char) file_name[i];
+      }
+
+      // guardar validez y tamaño
+      archivo ->validez = 1;
+      archivo ->tamano = 0;
+      // Añadir direccion virtual
+      /* unsigned char * virtual_dir = malloc(4 * sizeof(unsigned char)); */
+      archivo ->dir_virtual = malloc(4 * sizeof(unsigned char));
+      // verificar este indice de inicio
+      for(int j = 1; j <= 4; j++) {
+        /* virtual_dir[j - 1] = buffer[idx_primer_indice_libre + j + 16];
+        printf("%i-", buffer[idx_primer_indice_libre + j + 16]); */
+        archivo ->dir_virtual[j-1] = 9;
+      }
+      /* archivo ->dir_virtual = virtual_dir; */
+      guardar_info_new_file_a_archivo(archivo, idx_primer_indice_libre);
+      printf("SE CREO EL ARCHIVO REQUERIDO\n");
+      return archivo;
+      printf("SE CREO EL ARCHIVO REQUERIDO\n");
+    }
+    
   }
 }
+
 int liberar_memoria_archivo(CrmsFile * archivo) {
   free(archivo ->nombre);
   free(archivo ->dir_virtual);
@@ -247,7 +326,7 @@ int main(int argc, char **argv)
   printf("\n");
   printf("-------Ejecutando la funcion cr_exists-----------\n");
   printf("\n");
-  int existe = cr_exists(200, "hecomes.mp4");
+  int existe = cr_exists(200, "badcat.mp4");
   if (existe == 1){printf("El archivo SI esta almacenado en el proceso\n ");}
   else {printf("El archivo NO esta almacenado en el proceso\n ");}
   printf("\n");
@@ -255,6 +334,6 @@ int main(int argc, char **argv)
   printf("\n");
   cr_ls_files(200);
   printf("-------Ejecutando la funcion cr_open-----------\n");
-  CrmsFile * archivo = cr_open(200, "a.mp4", 'w');
+  /* CrmsFile * archivo = cr_open(200, "badcat.mp4", 'w'); */
   /* liberar_memoria_archivo(archivo); */
 }
