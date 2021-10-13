@@ -235,8 +235,32 @@ void cr_finish_process(int process_id)
               vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
               vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
               vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
-              printf("VPN \n%d\n", vpn);
-
+              printf("VPN %d\n", vpn);
+              int offset = 0;
+              offset += ((bytes[3] >> 7) & 1)*pow(2,0);
+              offset += ((bytes[3] >> 6) & 1)*pow(2,1);
+              offset += ((bytes[3] >> 5) & 1)*pow(2,2);
+              offset += ((bytes[3] >> 4) & 1)*pow(2,3);
+              offset += ((bytes[3] >> 3) & 1)*pow(2,4);
+              offset += ((bytes[3] >> 2) & 1)*pow(2,5);
+              offset += ((bytes[3] >> 1) & 1)*pow(2,6);
+              offset += ((bytes[3] >> 0) & 1)*pow(2,7);
+              offset += ((bytes[2] >> 7) & 1)*pow(2,8);
+              offset += ((bytes[2] >> 6) & 1)*pow(2,9);
+              offset += ((bytes[2] >> 5) & 1)*pow(2,10);
+              offset += ((bytes[2] >> 4) & 1)*pow(2,11);
+              offset += ((bytes[2] >> 3) & 1)*pow(2,12);
+              offset += ((bytes[2] >> 2) & 1)*pow(2,13);
+              offset += ((bytes[2] >> 1) & 1)*pow(2,14);
+              offset += ((bytes[2] >> 0) & 1)*pow(2,15);
+              offset += ((bytes[1] >> 7) & 1)*pow(2,16);
+              offset += ((bytes[1] >> 6) & 1)*pow(2,17);
+              offset += ((bytes[1] >> 5) & 1)*pow(2,18);
+              offset += ((bytes[1] >> 4) & 1)*pow(2,19);
+              offset += ((bytes[1] >> 3) & 1)*pow(2,20);
+              offset += ((bytes[1] >> 2) & 1)*pow(2,21);
+              offset += ((bytes[1] >> 1) & 1)*pow(2,22);
+              printf("OFFSET %d\n", offset);
 
             };
           }
