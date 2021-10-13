@@ -31,6 +31,7 @@ struct Frame
 };
 typedef struct Archivos
 {
+    int indice_buffer;
     unsigned char validez;
     unsigned char * nombre;
     unsigned char * tamano;
