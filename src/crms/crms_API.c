@@ -35,7 +35,7 @@ unsigned char buffer[5000];
  void cr_mount(char* memory_path)
   {
     memory_file = malloc(sizeof(FILE));
-    memory_file[0] = *(fopen(memory_path,"rb+"));
+    memory_file = (fopen(memory_path,"rb+"));
     // memory_file = (fopen(memory_path,"rb+"));
   }
 
@@ -355,7 +355,7 @@ int obtener_dir_virtual_new_file(int idx_proceso, int idx_primer_indice_libre){
   fseek(memory_file,0,SEEK_SET); 
   
   printf("%d %d %d\n", n_archivo, idx_primer_indice_libre, idx_proceso);
-
+}
 void cr_finish_process(int process_id) 
 {
   fseek(memory_file, 0 ,SEEK_SET);
@@ -618,7 +618,6 @@ que ese frame ya no esta siendo utilizado e invalidar la entrada correspondiente
 //   }
 
 
-}
 void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre, int idx_proceso){
   // Esto está siendo revisado
   obtener_dir_virtual_new_file(idx_proceso, idx_primer_indice_libre);
@@ -723,10 +722,6 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       archivo ->validez = 1;
       archivo ->tamano = 0;
       archivo ->indice_buffer = idx_primer_indice_libre;
-      
-      if (n_entradas_validas == 0 && n_entradas_totales) {
-        
-      }
       // FALTA AÑADIR DIRECCION VIRTUAL
       // Dir fisica es: PFN + Offset
       // Obtener VPN -> 
