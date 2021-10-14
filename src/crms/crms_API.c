@@ -12,6 +12,7 @@
 #define TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO 12
 #define TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO 4
 #define TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL 4 
+#define ESPACIO_PAGINA 8388608
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c\n"
 #define BYTE_TO_BINARY(byte)  \
   (byte & 0x80 ? '1' : '0'), \
@@ -30,7 +31,33 @@ unsigned char buffer[5000];
 /*Funcion para montar la memoria.
   Establece como variable global la ruta local donde se encuentra el archivo .bin 
   correspondiente a la memoria.*/
-
+archivo* ordenar_archivos(archivo* lista_files, int N)    
+{   
+  //Initialize array        
+  archivo elem_temp;      
+  //Sort the array in ascending order    
+  for (int i = 0; i < N; i++) {     
+      for (int j = i+1; j < N; j++) {     
+          if(lista_files[i].vpn > lista_files[j].vpn) //ordeno por VPN si uno es mayor al otro 
+            { 
+              elem_temp = lista_files[i]; 
+              lista_files[i] = lista_files[j];    
+              lista_files[j] = elem_temp;    
+            }   
+          else if (lista_files[i].inicio == lista_files[j].inicio) //en caso de que haya un empate
+          {
+            if (lista_files[i].direccion_virtual > lista_files[j].direccion_virtual) //desempate por dir virtual
+              {
+                elem_temp = lista_files[i]; 
+                lista_files[i] = lista_files[j];    
+                lista_files[j] = elem_temp;
+              }
+            
+          }  
+      }     
+  } 
+  return lista_files; //retorno la lista ordenada
+}  
 
  void cr_mount(char* memory_path)
   {
@@ -744,45 +771,225 @@ int liberar_memoria_archivo(CrmsFile * archivo) {
   return 1;
 }
 
+int* ordenar_archivos(int process_id, lista_direcciones* lista)
+{
+  fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
+  fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
+  
+  int cont_archivos = 0;
+  lista_archivos* lista_files= calloc(1, sizeof(lista_archivos)); //pido espacio para la lista de archivos
+  lista_files-> files = calloc(10, sizeof(archivo)) //pido espacio para los archivos de adentro
+  for (int k=0; k<15; k+=1) //for que recorre los 16 procesos
+  {
+    if (buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id) //si es el proceso que busco
+    {
+      for (int i=0; i<10; i+=1 ) //recorro los distintos archivos
+    {
+      // explicacion de indice: k*TAMANO_ENTRADA_PCB + 14 + i * TAMANO_SUBENTRADA_PCB:
+      //- k*TAMANO_ENTRADA_PCB: se posiciona en el bit de validez del proceso
+      // - 14 por primeros 14 bytes antes de subentradas de archivos
+      // - i * TAMANO_SUBENTRADA_PCB: voy de entrada en entrada, primero 14 + 0, 14 + 21, etc..
+      if (buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB]!=0) //solo considero los archivos validos
+      {
+        unsigned char dir_virtual[4]; //direccion virtual de 4 bytes
+        for (int j=0; j<4; j+=1){dir_virtual_buff[j] = buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB + j];} //guardo los 4 bytes
+        //creo struct para el archivo
+        archivo* file = calloc(1, sizeof(archivo)); //archivo
+        //obtengo vpn
+        int vpn = 0;
+        vpn += ((bytes[1] >> 0) & 1)*pow(2,0);
+        vpn += ((bytes[0] >> 7) & 1)*pow(2,1);
+        vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
+        vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
+        vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
+
+        file->vpn = vpn; //guardo el vpn en el struct
+
+        //guardo su id
+        file-> id = cont;
+
+        //obtengo su int de dir virtual
+
+        unsigned long int dir_virtual = 0;
+        
+        dir_virtual += (unsigned char) dir_virtual_buff[0] << 8 * 3;
+        dir_virtual += (unsigned char) dir_virtual_buff[1] << 8 * 2;
+        dir_virtual += (unsigned char) dir_virtual_buff[2] << 8 * 1;
+        dir_virtual += (unsigned char) dir_virtual_buff[3] << 8 * 0;
+            
+        file-> direccion_virtual = dir_virtual;
+        
+        //ACA ME FALTA GUARDAR EL TAMANO DEL ARCHIVO !!!!!
+
+        //en teoria una vez que llego aca tengo un archivo con su id, vpn y dir_virtual en int
+        lista_files[cont] = file; //agrego el struct a la lista
+
+        cont+=1; //sumo 1 a la cantidad de procesos
+      }
+    }
+
+    archivo* lista_ordenada = ordenar_archivos(lista_files->files, 10);   //ordeno la lista segun VPN y dirvirtual
+
+    lista_files->files = lista_ordenada; //la guardo para tenerla actualizada
+
+    //ahora tengo que recorrer la lista y ver en que pagina queda cada archivo
+    int pag_actual = -1; //variable auxiliar
+    int restante = ESPACIO_PAGINA; //variable auxiliar
+    int bytes_pendientes = 0;
+    archivo* elemento; //archivo actual
+
+    for (int i=0; i<10; i+=1)
+      {
+        elemento = lista_files->files[i]; //obtengo el archivo
+        if (pag_actual == -1 || ocupado = 0) //si es el primer archivo o estoy al inicio de una pagina
+        {   pag_actual = elemento.vpn; //actualizo la pagina
+
+           if (elemento.size < ESPACIO_PAGINA)//reviso si cabe en la pagina
+           {
+             elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+             elemento.pagina_final = pag_actual;//guardo su pagina final 
+             restante-= elemento.size; //guardo lo que queda de pagina
+           }
+           else if (elemento.size == ESPACIO_PAGINA) //si es igual al porte de la pagina
+           {
+             elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+             elemento.pagina_final = pag_actual;//guardo su pagina final 
+             restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
+             pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
+           }
+           else if (elemento.size > ESPACIO_PAGINA) //si es mayor al porte de la pagina
+           {
+             elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+             bytes_pendientes = elemento.size - ESPACIO_PAGINA; //bytes que faltan por escribir
+             for (int j=0; j<10-i; j+=1) //recorro las paginas siguientes hasta guardar el archivo
+             {
+               if (bytes_pendientes <= ESPACIO_PAGINA)//reviso si cabe en la pagina
+                {
+                  pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
+                  elemento.pagina_final = pag_actual;//guardo su pagina final 
+                  restante-= bytes_pendientes; //guardo lo que queda de pagina
+                  bytes_pendientes = 0;
+                  if(bytes_pendientes == ESPACIO_PAGINA){
+                    pag_actual +=1; //si complete la pagina me muevo a la siguiente
+                    restante = ESPACIO_PAGINA;} //reseteo el espacio disponible
+                  // !!!!!!!!!!!!!!!!!!!!ROMPER EL FOR!!!!!!!!!!!!!!!!!!!!!
+                }
+                else //si no cabe en la pagina
+                {
+                  bytes_pendientes-= ESPACIO_PAGINA;//escribo los que me caben
+                  restante = ESPACIO_PAGINA;} //reseteo el espacio disponible en la pag actual
+                }
+               
+             } 
+             restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
+              
+           }
+
+           else //si es que estoy en la mitad de una pagina intermedia 
+           {
+            pag_actual = elemento.vpn; //actualizo la pagina
+            if (elemento.size < restante) //reviso si cabe en lo que queda de la pagina
+            {
+              elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+              elemento.pagina_final = pag_actual;//guardo su pagina final 
+              restante-= elemento.size; //guardo lo que queda de pagina
+            }
+            else if (elemento.size == restante) //si es igual a lo que queda de la pagina
+            {
+              elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+              elemento.pagina_final = pag_actual;//guardo su pagina final 
+              restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
+              pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
+            }
+            else if (elemento.size > restante) //si es mayor al espacio disponible
+            {
+              elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
+              bytes_pendientes = elemento.size - restante; //bytes que faltan por escribir
+              for (int j=0; j<10-i; j+=1) //recorro las paginas siguientes hasta guardar el archivo
+              {
+                if (bytes_pendientes <= ESPACIO_PAGINA)//reviso si cabe en la pagina
+                {
+                  pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
+                  elemento.pagina_final = pag_actual;//guardo su pagina final 
+                  restante-= bytes_pendientes; //guardo lo que queda de pagina
+                  bytes_pendientes = 0;
+                  if(bytes_pendientes == ESPACIO_PAGINA){
+                    pag_actual +=1; //si complete la pagina me muevo a la siguiente
+                    restante = ESPACIO_PAGINA;} //reseteo el espacio disponible
+                  continue;
+                }
+                else //si no cabe en la pagina
+                {
+                  bytes_pendientes-= ESPACIO_PAGINA;//escribo los que me caben
+                  restante = ESPACIO_PAGINA;} //reseteo el espacio disponible en la pag actual
+                }
+                
+              } 
+              restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
+           }
+      }
+
+    continue;
+    }
+  }
+  
+
+
+   
+  
+
+
+
+   
+        
+
+}
+
+
 int main(int argc, char **argv)
 {
   printf("Hello P1!\n");
   char *input_name;
   input_name = argv[1];
   filename = input_name;
+  // print_page_table(filename);
+  // print_frame_bitmap(filename);
+  // printf("\n");
+  // printf("-------Ejecutando la funcion cr_mount-------\n");
+  // printf("\n");
+  // cr_mount(filename);
+  // printf("\n");
+  // printf("-------Ejecutando la funcion cr_ls_processes--------\n");
+  // printf("\n");
+  // cr_ls_processes();
+  // printf("\n");
+  // printf("\n");
+  // printf("-------Ejecutando la funcion cr_ls_files-----------\n");
+  // cr_ls_files(200);
+  // printf("-------Ejecutando la funcion cr_exists-----------\n");
+  // printf("\n");
+  // int existe = cr_exists(200, "greatcat.mp4");
+  // if (existe){printf("si existe\n");}
+  // else{printf("no existe\n");}
+  // printf("\n");
+  // print_memory(filename);
+  // printf("-------Ejecutando la funcion cr_start-----------\n");
+  // printf("\n");
+  // cr_start_process(2, "test1");
+  // printf("\n");
+  // print_memory(filename);
+  // printf("-------Ejecutando la funcion cr_finish-----------\n");
+  // printf("\n");
+  // cr_finish_process(2);
+  // cr_finish_process(28);
+  // print_memory(filename);
+  // cr_ls_files(200);
+  // printf("-------Ejecutando la funcion cr_open-----------\n");
+  // CrmsFile * archivo = cr_open(200, "hecomes.mp4", 'r');
   print_page_table(filename);
   print_frame_bitmap(filename);
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_mount-------\n");
-  printf("\n");
-  cr_mount(filename);
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_ls_processes--------\n");
-  printf("\n");
-  cr_ls_processes();
-  printf("\n");
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_ls_files-----------\n");
-  cr_ls_files(200);
-  printf("-------Ejecutando la funcion cr_exists-----------\n");
-  printf("\n");
-  int existe = cr_exists(200, "greatcat.mp4");
-  if (existe){printf("si existe\n");}
-  else{printf("no existe\n");}
-  printf("\n");
-  print_memory(filename);
-  printf("-------Ejecutando la funcion cr_start-----------\n");
-  printf("\n");
-  cr_start_process(2, "test1");
-  printf("\n");
-  print_memory(filename);
-  printf("-------Ejecutando la funcion cr_finish-----------\n");
-  printf("\n");
-  cr_finish_process(2);
-  cr_finish_process(28);
-  print_memory(filename);
-  cr_ls_files(200);
-  printf("-------Ejecutando la funcion cr_open-----------\n");
-  CrmsFile * archivo = cr_open(200, "hecomes.mp4", 'r');
   /* liberar_memoria_archivo(archivo); */
 }
+
+
+

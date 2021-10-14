@@ -9,7 +9,7 @@ typedef struct Tabla_PCB
 
 typedef struct Paginas
 {
-    unsigned char validez;
+    unsigned char used;
     unsigned char pfn;
 }Paginas;
 
@@ -52,3 +52,23 @@ typedef struct Proceso
 
 }Entrada;
 
+typedef struct Lista {
+    int cantidad;
+    int* archivos[10][2];
+
+
+}lista_direcciones;
+
+typedef struct file {
+    int id;
+    int vpn;
+    int direccion_virtual;
+    int pagina_inicio;
+    int pagina_final;
+    int size;
+}archivo;
+
+typedef struct lista_files{
+    archivo* files[10]; 
+    //lista con los archivos
+}lista_archivos;
