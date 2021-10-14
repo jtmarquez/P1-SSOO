@@ -449,8 +449,8 @@ int main(int argc, char **argv)
   input_name = argv[1];
   filename = input_name;
   print_page_table(filename);
-  //print_frame_bitmap(filename);
-  /* printf("\n");
+  print_frame_bitmap(filename);
+  printf("\n");
   printf("-------Ejecutando la funcion cr_mount-------\n");
   printf("\n");
   cr_mount(filename);
@@ -479,6 +479,4 @@ int main(int argc, char **argv)
   cr_finish_process(2);
   cr_finish_process(28);
   print_memory(filename);
-
-
 }
