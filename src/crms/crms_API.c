@@ -35,7 +35,7 @@ unsigned char buffer[5000];
  void cr_mount(char* memory_path)
   {
     memory_file = malloc(sizeof(FILE));
-    memory_file = (fopen(memory_path,"rb+"));
+    memory_file[0] = *(fopen(memory_path,"rb+"));
     // memory_file = (fopen(memory_path,"rb+"));
   }
 
@@ -644,7 +644,7 @@ void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_l
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
   if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO) {
     printf("Error: El nombre de archivo ingresado supera los 12 bytes");
-    return;
+    return 0;
   }
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
   int asignado = 0;
