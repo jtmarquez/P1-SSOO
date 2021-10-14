@@ -19,14 +19,12 @@ unsigned char buffer[5000];
   Establece como variable global la ruta local donde se encuentra el archivo .bin 
   correspondiente a la memoria.*/
 
- void cr_mount(char* memory_path)
-  {
-    memory_file = malloc(sizeof(FILE));
-    memory_file[0] = *(fopen(memory_path,"rb+"));
-    //memory_file = fopen(memory_path,"rb");
-  }
-
-
+void cr_mount(char* memory_path)
+{
+  memory_file = malloc(sizeof(FILE));
+  memory_file[0] = *(fopen(memory_path,"rb+"));
+  //memory_file = fopen(memory_path,"rb");
+}
 
 /* Funcion que muestra en pantalla los procesos en ejecucion.*/
 void cr_ls_processes()
@@ -163,25 +161,14 @@ void cr_start_process(int process_id, char* process_name)
       if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
       {
         printf("encontre la entrada %d vacia\n", cont/256);
-        char validation[4];
         int uno = 1;
-        sprintf(validation, "%d", uno);
-        printf("%s \n", validation);
-        char validation_char = (char) validation;
-
         fseek(memory_file, i*sizeof(char),SEEK_SET);
-        fwrite(&validation_char, sizeof(char), 1, memory_file);
-
-        char pid[4];
-        sprintf(pid, "%d", process_id);
-        char pid_char = (char) pid;
-        printf("%s \n", pid);
+        fwrite(&uno, sizeof(char), 1, memory_file);
         fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
-        fwrite(&pid_char, sizeof(char), 1, memory_file);
+        fwrite(&process_id, sizeof(char), 1, memory_file);
         for (int j = 0; j < strlen(process_name); j++)
         {
           char letter = (char)process_name[j];
-          printf("%c \n", letter);
           fseek(memory_file, (i+2+j)*sizeof(char),SEEK_SET);
           fwrite(&letter, sizeof(char), 1, memory_file);
         }
@@ -195,27 +182,119 @@ void cr_start_process(int process_id, char* process_name)
 
 void cr_finish_process(int process_id) 
 {
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file);
   int cont = 0;
   int sum = 256;
+  int cero = 0;
 
   for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
   {
     if (i == cont){ //si estoy al inicio de una de las entradas
-      if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
+      if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
       {
         if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
         {
-          buffer[i+1] = 0; //invalido el proceso correspondiente
-          //obtengo al direccion virtual correspondiente al proceso
+          printf("\nENTREEEEEEEEE\n");
+          fseek(memory_file, i*sizeof(char),SEEK_SET);
+          fwrite(&cero, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
+          // INVALIDAR PROCESO EN FRAME BITMAP
+          // 10 entradas archivos
+          for (int k = 0; k < 10*21; k+=21)
+          {
+            if (buffer[i+14+k] == 1)
+            {
+              // printf("lugar validez  \n%d\n", i+14+k);
+              fseek(memory_file, (i+14+k)*sizeof(char),SEEK_SET);
+              fwrite(&cero, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
+              // dirección virtual
+              // printf("\n");
+              // for (int a = i+14+k; a <= i+14+k+12; a++)
+              // {
+              //   printf("%c", buffer[a]);
+              // }
+              // printf("\n");
+              
+              unsigned char bytes[4];
+              for (int j = 0; j < 4; j++)
+              {
+                bytes[j] = buffer[i+31+k+j];
+                // printf("lugar i byte  \n%d\n", i+31+k+j);
+              };
+              // printf("byte 0 %u\n", (bytes[0]));
+              // printf("byte 1 %u\n", (bytes[1]));
+              // printf("byte 2 %u\n", (bytes[2]));
+              // printf("byte 3 %u\n", (bytes[3]));
+              // printf("bit 0 \n%u\n", (bytes[0] >> 4) & 1);
+              // printf("bit 1 \n%u\n", (bytes[0] >> 5) & 1);
+              // printf("bit 2 \n%u\n", (bytes[0] >> 6) & 1);
+              // printf("bit 3 \n%u\n", (bytes[0] >> 7) & 1);
+              // printf("bit 4 \n%u\n", (bytes[1] >> 0) & 1);
+              int vpn = 0;
+              vpn += ((bytes[1] >> 0) & 1)*pow(2,0);
+              vpn += ((bytes[0] >> 7) & 1)*pow(2,1);
+              vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
+              vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
+              vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
+              printf("VPN %d\n", vpn);
+              // int offset = 0;
+              // offset += ((bytes[3] >> 7) & 1)*pow(2,0);
+              // offset += ((bytes[3] >> 6) & 1)*pow(2,1);
+              // offset += ((bytes[3] >> 5) & 1)*pow(2,2);
+              // offset += ((bytes[3] >> 4) & 1)*pow(2,3);
+              // offset += ((bytes[3] >> 3) & 1)*pow(2,4);
+              // offset += ((bytes[3] >> 2) & 1)*pow(2,5);
+              // offset += ((bytes[3] >> 1) & 1)*pow(2,6);
+              // offset += ((bytes[3] >> 0) & 1)*pow(2,7);
+              // offset += ((bytes[2] >> 7) & 1)*pow(2,8);
+              // offset += ((bytes[2] >> 6) & 1)*pow(2,9);
+              // offset += ((bytes[2] >> 5) & 1)*pow(2,10);
+              // offset += ((bytes[2] >> 4) & 1)*pow(2,11);
+              // offset += ((bytes[2] >> 3) & 1)*pow(2,12);
+              // offset += ((bytes[2] >> 2) & 1)*pow(2,13);
+              // offset += ((bytes[2] >> 1) & 1)*pow(2,14);
+              // offset += ((bytes[2] >> 0) & 1)*pow(2,15);
+              // offset += ((bytes[1] >> 7) & 1)*pow(2,16);
+              // offset += ((bytes[1] >> 6) & 1)*pow(2,17);
+              // offset += ((bytes[1] >> 5) & 1)*pow(2,18);
+              // offset += ((bytes[1] >> 4) & 1)*pow(2,19);
+              // offset += ((bytes[1] >> 3) & 1)*pow(2,20);
+              // offset += ((bytes[1] >> 2) & 1)*pow(2,21);
+              // offset += ((bytes[1] >> 1) & 1)*pow(2,22);
+              // printf("OFFSET %d\n", offset);
+              unsigned char byte_tabla = buffer[i+224+vpn];
+              printf("byte %d\n", byte_tabla);
+              int pfn = 0;
+              int validation = (byte_tabla >> 0) & 1;
+              printf("validation %d\n" , validation);
+              pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
+              pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
+              pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
+              pfn += ((byte_tabla >> 4) & 1)*pow(2,3);
+              pfn += ((byte_tabla >> 3) & 1)*pow(2,4);
+              pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
+              pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
+              
+              printf("pfn %d\n", pfn);
+              int byte_bitmap = floor(pfn/8);
+              printf("byte index %d\n", byte_bitmap);
+              unsigned char byte = buffer[byte_bitmap+4096];
+              printf("byte %u\n", byte);
+              int dif = pfn - byte_bitmap*8;
+              printf("dif %u\n", dif);
+              unsigned char byte_write = byte & (!(1 << dif));
+              printf("byte write %u\n", byte_write);
+              //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
+              //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
+
+
+            };
+          }
         }
       }
     cont += sum;
     }
   }
-  //obtengo los primeros 5 bits = VPN
-  // ingreso a esa entrada de la tabla de paginas
-  //obtengo el PFN
-  // direccion fisica = PFN + offset
 }
 
 void print_memory(char* filename){
@@ -392,8 +471,14 @@ int main(int argc, char **argv)
   print_memory(filename);
   printf("-------Ejecutando la funcion cr_start-----------\n");
   printf("\n");
-  cr_start_process(3, "test1");
+  cr_start_process(2, "test1");
   printf("\n");
-  print_memory(filename); */
+  print_memory(filename);
+  printf("-------Ejecutando la funcion cr_finish-----------\n");
+  printf("\n");
+  cr_finish_process(2);
+  cr_finish_process(28);
+  print_memory(filename);
+
 
 }
