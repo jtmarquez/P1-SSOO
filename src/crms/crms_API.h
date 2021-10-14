@@ -31,10 +31,15 @@ struct Frame
 };
 typedef struct Archivos
 {
+    int indice_buffer;
+    int id_proceso;
+    unsigned char vpn;
+    int offset;
     unsigned char validez;
-    unsigned char nombre;
-    unsigned char tamano;
-    unsigned char dir_virtual;   
+    unsigned char * nombre;
+    unsigned char * tamano;
+    unsigned char * dir_virtual;   
+    unsigned char * dir_fisica;
 }CrmsFile;
 
 typedef struct Proceso
