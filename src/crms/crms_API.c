@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h> 
 #include "../file_manager/manager.h"
 #include "crms_API.h"
 
@@ -235,13 +236,142 @@ void print_memory(char* filename){
   }
 }
 
+
+void print_page_table(char* filename){
+  cr_mount(filename);
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+  int inicio = 224;
+  int cont = 224;
+  int sum = 256;
+  int num = 0;
+  for (int j = 0; j <16; j+=1)
+  {
+    printf("\n [Proceso %d] \n", j);
+    for(int i = (inicio + j*sum); i < (inicio + 32+ j*sum); i++){
+  
+    int pfn = 0;
+    int validation = ((buffer[i] >> 0) & 1) !=0; //primer bit
+    pfn += ((buffer[i] >> 7) & 1)*pow(2,0);
+    pfn += ((buffer[i] >> 6) & 1)*pow(2,1);
+    pfn += ((buffer[i] >> 5) & 1)*pow(2,2);
+    pfn += ((buffer[i] >> 4) & 1)*pow(2,3);
+    pfn += ((buffer[i] >> 3) & 1)*pow(2,4);
+    pfn += ((buffer[i] >> 2) & 1)*pow(2,5);
+    pfn += ((buffer[i] >> 1) & 1)*pow(2,6);
+    printf("i: %d validation %d: pfn %d\n", i, validation, pfn);
+  }
+    cont = inicio + j*sum;
+  }
+  
+}
+
+
+void print_frame_bitmap(char* filename){
+  cr_mount(filename);
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+  int inicio = 4096;
+  int cont = 4096;
+  int num = 0;
+
+  for(int i = inicio; i < inicio + 16; i++){
+    if (i == cont){ 
+        printf("\n [Entrada: %d] \n",num);
+        
+    cont += 1;
+    num +=1;
+    }
+    int bit0 =  ((buffer[i] >> 0) & 1) !=0; //primer bit
+    printf("bit0 %d\n", bit0);
+    int bit1 = ((buffer[i] >> 7) & 1)!=0;
+    printf("bit1 %d\n", bit1);
+    int bit2 = ((buffer[i] >> 6) & 1)!=0;
+    printf("bit2 %d\n", bit2);
+    int bit3 =  ((buffer[i] >> 5) & 1)!=0;
+    printf("bit3 %d\n", bit3);
+    int bit4 = ((buffer[i] >> 4) & 1)!=0;
+    printf("bit4 %d\n", bit4);
+    int bit5 =  ((buffer[i] >> 3) & 1)!=0;
+    printf("bit5 %d\n", bit5);
+    int bit6 =  ((buffer[i] >> 2) & 1)!=0;
+    printf("bit6 %d\n", bit6);
+    int bit7 =  ((buffer[i] >> 1) & 1)!=0;
+    printf("bit7 %d\n", bit7);
+  }
+}
+
+
+
+
+/*Funcion para liberar memoria de un archivo perteneciente al proceso con id process id. 
+Para esto el archivo debe dejar de aparecer en la memoria virtual del proceso, 
+ademas, si los frames quedan totalmente libres se debe indicar en el frame bitmap 
+que ese frame ya no esta siendo utilizado e invalidar la entrada correspondiente en la tabla de paginas.*/
+
+// void cr_delete_file(CrmsFile* file_desc)
+//   {
+//     fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
+//     fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
+//     int inicio_archivo = file_desc.indice_buffer;//encuentro el inicio del archivo que quiero
+//     int zero = 0;
+//     fseek(memory_file, inicio_archivo*sizeof(char),SEEK_SET);
+//     printf("pos inicio archivo es: %d\n ", inicio_archivo);
+//     printf("ahi encontre: %d\n ", buffer[inicio_archivo]);
+//     fwrite(&zero, sizeof(char), 1, memory_file); //pongo en 0 el bit de validez del archivo en mem virtual
+//     //me paro en la direccion virtual
+//     unsigned char bytes[4]; //para los 4 bytes de la dir virtual
+//     for (int i = 0; i <4; i+=1)
+//       {
+//         bytes[i] = buffer[inicio_archivo + 17 + i] //bytes de dir virtual
+//       }
+//     int vpn = 0; //vpn segundos 4 bits de primer byte + primer bit del primer byte
+//     vpn += (((bytes[1] >> 0) & 1)!=0) *pow(2,0);
+//     vpn += (((bytes[0] >> 7) & 1)!=0)*pow(2,1);
+//     vpn += (((bytes[0] >> 6) & 1)!=0)*pow(2,2);
+//     vpn += (((bytes[0] >> 5) & 1)!=0)*pow(2,3);
+//     vpn += (((bytes[0] >> 4) & 1)!=0)*pow(2,4);
+//     printf("VPN %d\n", vpn); //obtengo el vpn
+
+//     unsigned char byte_tabla_pags = buffer[4096 + vpm] -> pagina;
+//     printf("byte %d\n", byte_tabla);
+
+//     //obtengo el pfn
+//     int pfn = 0;
+//     int validation = ((byte_tabla >> 0) & 1) !=0; //primer bit
+//     printf("validation %d\n" , validation);
+//     pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
+//     pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
+//     pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
+//     pfn += ((byte_tabla >> 4) & 1)*pow(2,3);
+//     pfn += ((byte_tabla >> 3) & 1)*pow(2,4);
+//     pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
+//     pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
+//     printf("pfn %d\n", pfn);
+
+//     /*int byte_bitmap = floor(pfn/8); //encuentro en que byte esta el frame
+//     printf("byte index %d\n", byte_bitmap);
+//     unsigned char byte = buffer[byte_bitmap+4000];
+//     printf("byte %u\n", byte);
+//     int dif = pfn - byte_bitmap*8;
+//     printf("dif %u\n", dif);
+//     unsigned char byte_write = byte & (!(1 << dif));
+//     printf("byte write %u\n", byte_write);
+//     //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
+//     //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
+//     //obtengo la dir fisica*/
+//   }
+
+
 int main(int argc, char **argv)
 {
   printf("Hello P1!\n");
   char *input_name;
   input_name = argv[1];
   filename = input_name;
-  printf("\n");
+  print_page_table(filename);
+  //print_frame_bitmap(filename);
+  /* printf("\n");
   printf("-------Ejecutando la funcion cr_mount-------\n");
   printf("\n");
   cr_mount(filename);
@@ -264,6 +394,6 @@ int main(int argc, char **argv)
   printf("\n");
   cr_start_process(3, "test1");
   printf("\n");
-  print_memory(filename);
+  print_memory(filename); */
 
 }
