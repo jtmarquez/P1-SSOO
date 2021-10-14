@@ -277,7 +277,7 @@ void cr_finish_process(int process_id)
               printf("pfn %d\n", pfn);
               int byte_bitmap = floor(pfn/8);
               printf("byte index %d\n", byte_bitmap);
-              unsigned char byte = buffer[byte_bitmap+4000];
+              unsigned char byte = buffer[byte_bitmap+4096];
               printf("byte %u\n", byte);
               int dif = pfn - byte_bitmap*8;
               printf("dif %u\n", dif);
