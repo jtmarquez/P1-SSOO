@@ -771,7 +771,7 @@ int liberar_memoria_archivo(CrmsFile * archivo) {
   return 1;
 }
 
-int* ordenar_archivos(int process_id, lista_direcciones* lista)
+lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
 {
   fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
   fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
@@ -932,17 +932,8 @@ int* ordenar_archivos(int process_id, lista_direcciones* lista)
     continue;
     }
   }
-  
 
-
-   
-  
-
-
-
-   
-        
-
+return lista_files;
 }
 
 
