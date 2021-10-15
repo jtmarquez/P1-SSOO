@@ -1011,16 +1011,19 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
   lista_archivos* lista = ordenar_archivos_proceso(file_desc->id_proceso);
   int indice_lista;
   int archivo_valido = 0;
-  FILE *archivo = fopen(file_desc->nombre, "r");
+  // FILE *archivo = fopen(file_desc->nombre, "r");
   int bytes_ya_leidos = 0;
-  unsigned char información;
+  unsigned char info[n_bytes];
+  int indice_bytes = 0;
   int indice = 4096 + 16 + lista->files[indice_lista].pos_relativa + 1;
+
+   
 
 
   // buscar archivo en lista_archivos
   for (int i = 0; i < 10; i++)
   {
-    if (lista->files[i].vpn == file_desc->vpn && lista->files[i].direccion_virtual == file_desc->dir_virtual)
+    if (lista->files[i].vpn == (int)file_desc->vpn && lista->files[i].direccion_virtual == (int)file_desc->dir_virtual)
     {
       indice_lista = i;
     }
@@ -1031,6 +1034,11 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
   {
     int archivo_valido = 1;
   }
+
+  int frames = (lista->files[indice_lista].pagina_final - lista->files[indice_lista].pagina_inicio);
+  int contador_frames = 0;
+  int pagina_actual = lista->files[indice_lista].pagina_inicio;
+  int bytes_pagina = 0;
 
   // Si el archivo es valido
   if (!archivo_valido)
@@ -1048,20 +1056,25 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
       for (int i = 0; i < file_desc->bytes_leidos; i++)
       {
         // Pasa al siguiente frame
-        if (/* paso al siguiente frame */)
+        if ((pagina_actual*8388608 - (int)file_desc->dir_virtual == bytes_pagina) && contador_frames != frames)
         {
           indice++;
+          contador_frames++;
+          bytes_pagina = 0;
         }
         indice++;
+        bytes_pagina++;
       }
     }
 
     for (int i = 0; i < n_bytes; i++)
     {
       // Pasa al siguiente frame
-      if (/* pasa a siguiente frame */)
+      if ((pagina_actual*8388608 - (int)file_desc->dir_virtual == bytes_pagina) && contador_frames != frames)
       {
         indice++;
+        contador_frames++;
+        bytes_pagina = 0;
       }
       // Si el archivo termino
       if ((int)file_desc->tamano == file_desc->bytes_leidos + bytes_ya_leidos)
@@ -1069,14 +1082,17 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
         break;
       }
       // 
-      // fread(p_buffer, 1, 1, buffer);
+      info[indice_bytes] = buffer[indice];
+      indice_bytes++;
       bytes_ya_leidos++;
       indice++;
+      bytes_pagina++;
     }
   }
   else{
     printf("El archivo no es válido");
   }
+  p_buffer = info;
   file_desc->bytes_leidos = file_desc->bytes_leidos + bytes_ya_leidos;
   return bytes_ya_leidos;
 }
