@@ -35,14 +35,14 @@ typedef struct Archivos
     int id_proceso;
     unsigned char vpn;
     int offset;
+    int creado;
     unsigned char validez;
     unsigned char * nombre;
     unsigned char * tamano;
-    unsigned char * dir_virtual;
-    unsigned char * dir_virtual_int;   
+    unsigned char * dir_virtual; 
     unsigned char * dir_fisica;
+    int dir_virtual_int;
     int bytes_leidos;
-
 }CrmsFile;
 
 typedef struct Proceso
