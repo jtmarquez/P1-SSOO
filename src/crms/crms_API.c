@@ -406,77 +406,24 @@ void cr_finish_process(int process_id)
           {
             if (buffer[i+14+k] == 1)
             {
-              // printf("lugar validez  \n%d\n", i+14+k);
               fseek(memory_file, (i+14+k)*sizeof(char),SEEK_SET);
               fwrite(&cero, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
-              // dirección virtual
-              // printf("\n");
-              // for (int a = i+14+k; a <= i+14+k+12; a++)
-              // {
-              //   printf("%c", buffer[a]);
-              // }
-              // printf("\n");
               
               unsigned char bytes[4];
               for (int j = 0; j < 4; j++)
               {
                 bytes[j] = buffer[i+31+k+j];
-                // printf("lugar i byte  \n%d\n", i+31+k+j);
               };
-              // printf("byte 0 %u\n", (bytes[0]));
-              // printf("byte 1 %u\n", (bytes[1]));
-              // printf("byte 2 %u\n", (bytes[2]));
-              // printf("byte 3 %u\n", (bytes[3]));
-              // printf("bit 0 \n%u\n", (bytes[0] >> 4) & 1);
-              // printf("bit 1 \n%u\n", (bytes[0] >> 5) & 1);
-              // printf("bit 2 \n%u\n", (bytes[0] >> 6) & 1);
-              // printf("bit 3 \n%u\n", (bytes[0] >> 7) & 1);
-              // printf("bit 4 \n%u\n", (bytes[1] >> 0) & 1);
-              int vpn = 0;
-              vpn += ((bytes[1] >> 0) & 1)*pow(2,0);
-              vpn += ((bytes[0] >> 7) & 1)*pow(2,1);
-              vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
-              vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
-              vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
+              int vpn = obtener_VPN(bytes[0], bytes[1]);
               printf("VPN %d\n", vpn);
-              // int offset = 0;
-              // offset += ((bytes[3] >> 7) & 1)*pow(2,0);
-              // offset += ((bytes[3] >> 6) & 1)*pow(2,1);
-              // offset += ((bytes[3] >> 5) & 1)*pow(2,2);
-              // offset += ((bytes[3] >> 4) & 1)*pow(2,3);
-              // offset += ((bytes[3] >> 3) & 1)*pow(2,4);
-              // offset += ((bytes[3] >> 2) & 1)*pow(2,5);
-              // offset += ((bytes[3] >> 1) & 1)*pow(2,6);
-              // offset += ((bytes[3] >> 0) & 1)*pow(2,7);
-              // offset += ((bytes[2] >> 7) & 1)*pow(2,8);
-              // offset += ((bytes[2] >> 6) & 1)*pow(2,9);
-              // offset += ((bytes[2] >> 5) & 1)*pow(2,10);
-              // offset += ((bytes[2] >> 4) & 1)*pow(2,11);
-              // offset += ((bytes[2] >> 3) & 1)*pow(2,12);
-              // offset += ((bytes[2] >> 2) & 1)*pow(2,13);
-              // offset += ((bytes[2] >> 1) & 1)*pow(2,14);
-              // offset += ((bytes[2] >> 0) & 1)*pow(2,15);
-              // offset += ((bytes[1] >> 7) & 1)*pow(2,16);
-              // offset += ((bytes[1] >> 6) & 1)*pow(2,17);
-              // offset += ((bytes[1] >> 5) & 1)*pow(2,18);
-              // offset += ((bytes[1] >> 4) & 1)*pow(2,19);
-              // offset += ((bytes[1] >> 3) & 1)*pow(2,20);
-              // offset += ((bytes[1] >> 2) & 1)*pow(2,21);
-              // offset += ((bytes[1] >> 1) & 1)*pow(2,22);
-              // printf("OFFSET %d\n", offset);
               unsigned char byte_tabla = buffer[i+224+vpn];
               printf("byte %d\n", byte_tabla);
-              int pfn = 0;
-              int validation = (byte_tabla >> 0) & 1;
+              int pfn = (byte_tabla >> 1);
+              int validation = (byte_tabla >> 0) & 0x01;
               printf("validation %d\n" , validation);
-              pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
-              pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
-              pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
-              pfn += ((byte_tabla >> 4) & 1)*pow(2,3);
-              pfn += ((byte_tabla >> 3) & 1)*pow(2,4);
-              pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
-              pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
-              
+              unsigned char byte_write_table = byte_tabla & (!(0x01 << 0));
+              fseek(memory_file, (i+224+vpn)*sizeof(char),SEEK_SET);
+              fwrite(&byte_write_table, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
               printf("pfn %d\n", pfn);
               int byte_bitmap = floor(pfn/8);
               printf("byte index %d\n", byte_bitmap);
@@ -484,12 +431,10 @@ void cr_finish_process(int process_id)
               printf("byte %u\n", byte);
               int dif = pfn - byte_bitmap*8;
               printf("dif %u\n", dif);
-              unsigned char byte_write = byte & (!(1 << dif));
-              printf("byte write %u\n", byte_write);
-              //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
-              //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
-
-
+              unsigned char byte_write_bitmap = byte & (!(0x01 << dif));
+              printf("byte write %u\n", byte_write_bitmap);
+              fseek(memory_file, (byte_bitmap+4096)*sizeof(char),SEEK_SET);
+              fwrite(&byte_write_bitmap, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
             };
           }
         }
@@ -497,6 +442,7 @@ void cr_finish_process(int process_id)
     cont += sum;
     }
   }
+  fclose(memory_file);
 }
 
 void print_memory(char* filename){
@@ -991,39 +937,43 @@ int main(int argc, char **argv)
   printf("-------Ejecutando la funcion cr_ls_files-----------\n");
   cr_ls_files(4);
   
-  // printf("-------Ejecutando la funcion cr_exists-----------\n");
-  // printf("\n");
-  // int existe = cr_exists(200, "greatcat.mp4");
-  // if (existe){printf("si existe\n");}
-  // else{printf("no existe\n");}
-  // printf("\n");
-  // print_memory(filename);
-  // printf("-------Ejecutando la funcion cr_start-----------\n");
-  // printf("\n");
-  // cr_start_process(2, "test1");
-  // printf("\n");
-  // print_memory(filename);
-  // printf("-------Ejecutando la funcion cr_finish-----------\n");
-  // printf("\n");
-  // cr_finish_process(2);
-  // cr_finish_process(28);
-  // print_memory(filename);
-  // cr_ls_files(200);
+  printf("-------Ejecutando la funcion cr_exists-----------\n");
+  printf("\n");
+  int existe = cr_exists(200, "greatcat.mp4");
+  if (existe){printf("si existe\n");}
+  else{printf("no existe\n");}
+  printf("\n");
+  print_memory(filename);
+  printf("-------Ejecutando la funcion cr_start-----------\n");
+  printf("\n");
+  cr_start_process(2, "test1");
+  printf("\n");
+  cr_mount(filename);
+  print_memory(filename);
+  printf("-------Ejecutando la funcion cr_finish-----------\n");
+  printf("\n");
+  cr_finish_process(2);
+  cr_mount(filename);
+  cr_finish_process(28);
+  cr_mount(filename);
+  print_memory(filename);
+  cr_ls_files(200);
   // printf("-------Ejecutando la funcion cr_open-----------\n");
   // CrmsFile * archivo = cr_open(200, "hecomes.mp4", 'r');
   //print_page_table(filename);
   //print_frame_bitmap(filename);
-  lista_archivos* lista_resultado = ordenar_archivos_proceso(4);
+  lista_archivos* lista_resultado = ordenar_archivos_proceso(28);
   int tamano = 0;
   for (int i=0; i<10; i+=1){
     archivo elemento = lista_resultado->files[i];
     if (elemento.validez == 1){
       printf("[valido: %d] | [archivo: %d] | [vpn: %d] | [dir_virtual: %d] | [tamaño: %d] |[pag_inicio: %d] | [pag_fin: %d]\n",
      elemento.validez, elemento.id, elemento.vpn, elemento.direccion_virtual, elemento.size, elemento.pagina_inicio, elemento.pagina_final );
-     
+      tamano += elemento.size;
     }
     
   }
+  printf("tamaño %d\n", tamano);
   
   /* liberar_memoria_archivo(archivo); */
 }
