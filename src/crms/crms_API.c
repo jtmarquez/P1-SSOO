@@ -995,58 +995,59 @@ void cr_close(CrmsFile* file_desc){
     else {
         printf("el archivo no estaba abierto \n");
     }
-
-int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
-{
-  unsigned char *inicio;
-  unsigned char *bytes;
-  FILE *archivo = fopen(file_desc->nombre, "r");
-  
-  // No necesariamente esta en el numero n_frames por tamaño, puede que parta en la mitad de otro
-  float n_frames = (float) file_desc->tamano / (float)2048;
-
-  fseek(memory_file, /* llegar al inicio del frame_inicial del archivo (saltarte el bitmap y todas esas tonteras (pcb) y el pfn del frame inicial)*/, SEEK_SET);
-
-  if (file_desc->tamano < n_bytes * /* bytes*/)
-  {
-    /* Revisa que los bytes a leer sean menor a los del archivo, 
-      si no cambia el valor de bytes a leer por el tamaño del archivo */
-    n_bytes = file_desc->tamano;
-  }
-
-  if (file_desc->bytes_leidos != 0)
-  {
-    /* mover puntero n bytes*/
-    for (int i = 0; i < file_desc->bytes_leidos; i++)
-    {
-      if (/* paso al siguiente fram */)
-      {
-        fseek(memory_file, /* saltar a sig frame */, SEEK_CUR);
-      }
-      fseek(memory_file, 1, SEEK_CUR);
-    }
-  }
-
-  int bytes_ya_leidos = 0;
-
-  for (int i = 0; i < n_bytes; i++)
-  {
-    /* code */
-    if (/* pasa a siguiente frame */)
-    {
-      fseek(memory_file, /* saltar al inicio del sig frame, saltarse pfn*/, SEEK_CUR);
-    }
-    if (/* termino archivo */)
-    {
-      break;
-    }
-    fseek(memory_file, 1, SEEK_CUR);
-    fread(p_buffer, 1, 1, memory_file);
-    bytes_ya_leidos++;
-  }
-
-  return bytes_ya_leidos;
 }
+
+// int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
+// {
+//   unsigned char *inicio;
+//   unsigned char *bytes;
+//   FILE *archivo = fopen(file_desc->nombre, "r");
+  
+//   // No necesariamente esta en el numero n_frames por tamaño, puede que parta en la mitad de otro
+//   float n_frames = (float) file_desc->tamano / (float)2048;
+
+//   fseek(memory_file, /* llegar al inicio del frame_inicial del archivo (saltarte el bitmap y todas esas tonteras (pcb) y el pfn del frame inicial)*/, SEEK_SET);
+
+//   if (file_desc->tamano < n_bytes * /* bytes*/)
+//   {
+//     /* Revisa que los bytes a leer sean menor a los del archivo, 
+//       si no cambia el valor de bytes a leer por el tamaño del archivo */
+//     n_bytes = file_desc->tamano;
+//   }
+
+//   if (file_desc->bytes_leidos != 0)
+//   {
+//     /* mover puntero n bytes*/
+//     for (int i = 0; i < file_desc->bytes_leidos; i++)
+//     {
+//       if (/* paso al siguiente fram */)
+//       {
+//         fseek(memory_file, /* saltar a sig frame */, SEEK_CUR);
+//       }
+//       fseek(memory_file, 1, SEEK_CUR);
+//     }
+//   }
+
+//   int bytes_ya_leidos = 0;
+
+//   for (int i = 0; i < n_bytes; i++)
+//   {
+//     /* code */
+//     if (/* pasa a siguiente frame */)
+//     {
+//       fseek(memory_file, /* saltar al inicio del sig frame, saltarse pfn*/, SEEK_CUR);
+//     }
+//     if (/* termino archivo */)
+//     {
+//       break;
+//     }
+//     fseek(memory_file, 1, SEEK_CUR);
+//     fread(p_buffer, 1, 1, memory_file);
+//     bytes_ya_leidos++;
+//   }
+
+//   return bytes_ya_leidos;
+// }
 
 
 int main(int argc, char **argv)
