@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <math.h> 
+#include <math.h>
 #include "../file_manager/manager.h"
 #include "crms_API.h"
 
@@ -14,15 +14,15 @@
 #define TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL 4 
 #define ESPACIO_PAGINA 8388608
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c\n"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0') 
+#define BYTE_TO_BINARY(byte)     \
+  (byte & 0x80 ? '1' : '0'),     \
+      (byte & 0x40 ? '1' : '0'), \
+      (byte & 0x20 ? '1' : '0'), \
+      (byte & 0x10 ? '1' : '0'), \
+      (byte & 0x08 ? '1' : '0'), \
+      (byte & 0x04 ? '1' : '0'), \
+      (byte & 0x02 ? '1' : '0'), \
+      (byte & 0x01 ? '1' : '0')
 
 char *filename;
 FILE *memory_file;
@@ -68,80 +68,86 @@ archivo* ordenar_archivos(archivo* lista_files, int N)
 
 /* Funcion que muestra en pantalla los procesos en ejecucion.*/
 void cr_ls_processes()
+{
+  fseek(memory_file, 0, SEEK_SET);
+  fread(buffer, sizeof(buffer), 1, memory_file); // read 10 bytes to our buffer*/
+  int cont = 0;
+  int num = 1;
+  int sum = 256;
+  int aux;
+  for (int i = 0; i < N_ENTRADAS_PCB * TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB)
   {
-    fseek(memory_file, 0 ,SEEK_SET);
-    fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
-    int cont = 0;
-    int num = 1;
-    int sum = 256;
-    int aux;
-    for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB){
-      if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
-        if (buffer[i] == 1)
-        {
-          aux = i + 1;
-          printf("\n [Entrada: %d, Proceso en ejecucion: %d] \n",num, buffer[aux]);
-        }
+    if (i == 0 || !(i % TAMANO_ENTRADA_PCB))
+    {
+      if (buffer[i] == 1)
+      {
+        aux = i + 1;
+        printf("\n [Entrada: %d, Proceso en ejecucion: %d] \n", num, buffer[aux]);
+      }
 
       cont += sum;
-      num +=1;
-      }
-    //printf("%d", buffer[i]);
-
+      num += 1;
     }
+    //printf("%d", buffer[i]);
   }
+}
 /* Funcion para ver si un archivo con nombre file name existe en la memoria del proceso con id process id. 
 Retorna 1 si existe y 0 en caso contrario.*/
-int cr_exists(int process_id, char* file_name)
+int cr_exists(int process_id, char *file_name)
+{
+
+  fseek(memory_file, 0, SEEK_SET);
+  fread(buffer, sizeof(buffer), 1, memory_file);
+  int cont = 0;
+  int sum = 256;
+
+  int existe = 0;
+
+  for (int i = 0; i < N_ENTRADAS_PCB * TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB)
   {
-
-    fseek(memory_file, 0 ,SEEK_SET);
-    fread(buffer,sizeof(buffer),1,memory_file);
-    int cont = 0;
-    int sum = 256;
-
-    int existe = 0;
-
-    for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i += TAMANO_ENTRADA_PCB)
-    {
-      if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){ //si estoy al inicio de una de las entradas (i mod 256 = 0)
-        if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+    if (i == 0 || !(i % TAMANO_ENTRADA_PCB))
+    {                     //si estoy al inicio de una de las entradas (i mod 256 = 0)
+      if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+      {
+        if (buffer[i + 1] == process_id) //si es el proceso que busco
         {
-          if (buffer[i+1] == process_id) //si es el proceso que busco
-          {
-            //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
-            int inicio = i + 14; //donde empiezan las subentradas de archivos
-            for (int j = inicio; j <= (i + 14 + 210); j += TAMANO_SUBENTRADA_PCB) //10 entradas de 21 bits cada una
-            {//printf("j es: %d y inicio es %d\n", j, inicio);
-              if ((j - inicio) == 0 || !((j - inicio) % TAMANO_SUBENTRADA_PCB)) //si estoy al inicio de una subentrada (j - inicio mod 21 = 0)
+          //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
+          int inicio = i + 14;                                                  //donde empiezan las subentradas de archivos
+          for (int j = inicio; j <= (i + 14 + 210); j += TAMANO_SUBENTRADA_PCB) //10 entradas de 21 bits cada una
+          {                                                                     //printf("j es: %d y inicio es %d\n", j, inicio);
+            if ((j - inicio) == 0 || !((j - inicio) % TAMANO_SUBENTRADA_PCB))   //si estoy al inicio de una subentrada (j - inicio mod 21 = 0)
+            {
+              existe = 1;
+              if (buffer[j] == 1) //si la subentrada es valida
+              {
+                int cont_filename = 0;
+                for (int k = j; k < j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; k++)
                 {
-                  existe = 1;
-                  if (buffer[j] == 1)//si la subentrada es valida
+                  if (file_name[cont_filename] != buffer[k + 1])
                   {
-                    int cont_filename = 0;
-                    for (int k = j; k < j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; k++){
-                      if (file_name[cont_filename] != buffer[k+1]){
-                        existe = 0;
-                      }
-                      cont_filename += 1;
-                    }
-                    if (existe == 1){
-                      return existe;
-                    }
-                  }   
-                } 
+                    existe = 0;
+                  }
+                  cont_filename += 1;
+                }
+                if (existe == 1)
+                {
+                  return existe;
+                }
+              }
             }
-          } 
+          }
         }
       }
     }
-    existe = 0;
-    return existe;
   }
+  existe = 0;
+  return existe;
+}
 
-//Funcion para listar los archivos dentro de la memoria del proceso. 
-//Imprime en pantalla los nombres de todos los archivos presentes en 
+//Funcion para listar los archivos dentro de la memoria del proceso.
+//Imprime en pantalla los nombres de todos los archivos presentes en
 //la memoria del proceso con id process id.
+
 
 unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_dir_virtual){
   unsigned char p5 = (pos_0_dir_virtual >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
@@ -373,94 +379,99 @@ lista_archivos* ordenar_archivos_proceso(int process_id)
 return lista_files;
 }
 
-void cr_ls_files(int process_id){
-    fseek(memory_file, 0 ,SEEK_SET);
-    fread(buffer,sizeof(buffer),1,memory_file);
-    int cont = 0;
-    int sum = 256;
-
-    for(int i = 0; i<4096; i++)
-    {
-      if (i == cont){ //si estoy al inicio de una de las entradas
-        if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+void cr_ls_files(int process_id)
+{
+  fseek(memory_file, 0, SEEK_SET);
+  fread(buffer, sizeof(buffer), 1, memory_file);
+  int cont = 0;
+  int sum = 256;
+  for (int i = 0; i < 4096; i++)
+  {
+    if (i == cont)
+    {                     //si estoy al inicio de una de las entradas
+      if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
+      {
+        if (buffer[i + 1] == process_id) //si es el proceso que busco
         {
-          if (buffer[i+1] == process_id) //si es el proceso que busco
-          {
-            //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
-            int inicio = i + 14; //donde empiezan las subentradas de archivos
-            int suma = 21;
-            for (int j=inicio; j<= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
-            {//printf("j es: %d y inicio es %d\n", j, inicio);
-              if (j==inicio) //si estoy al inicio de una subentrada
+          //printf("encontre el  proceso %d = %d \n", buffer[i+1], process_id);
+          int inicio = i + 14; //donde empiezan las subentradas de archivos
+          int suma = 21;
+          for (int j = inicio; j <= (i + 14 + 210); j++) //10 entradas de 21 bits cada una
+          {                                              //printf("j es: %d y inicio es %d\n", j, inicio);
+            if (j == inicio)                             //si estoy al inicio de una subentrada
+            {
+              //printf("ENTRADA\n");
+              if (buffer[j] == 1) //si la subentrada es valida
+              {
+                for (int k = j; k <= j + 12; k++)
                 {
-                  //printf("ENTRADA\n");
-                  if (buffer[j] == 1)//si la subentrada es valida
-                  {
-                   for (int k = j; k<= j+ 12; k++){printf("%c", buffer[k]);}
-                   printf("\n");
-                  }
-                  
-              inicio += suma;
+                  printf("%c", buffer[k]);
                 }
-              
-             // printf("%d", buffer[j]);
+                printf("\n");
+              }
+
+              inicio += suma;
             }
-          
+
+            // printf("%d", buffer[j]);
           }
-      
         }
-    cont += sum;
+      }
+      cont += sum;
     }
   }
 }
 
-
-
- //Funcion que inicia un proceso con id process id y nombre process name. 
- //Guarda toda la informacion correspondiente en una entrada en la tabla de PCBs.
-void cr_start_process(int process_id, char* process_name)
+//Funcion que inicia un proceso con id process id y nombre process name.
+//Guarda toda la informacion correspondiente en una entrada en la tabla de PCBs.
+void cr_start_process(int process_id, char *process_name)
 {
-  fseek(memory_file, 0 ,SEEK_SET);
-  fread(buffer,sizeof(buffer),1,memory_file);
+  fseek(memory_file, 0, SEEK_SET);
+  fread(buffer, sizeof(buffer), 1, memory_file);
   int cont = 0;
   int sum = 256;
 
-  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
+  for (int i = 0; i < N_ENTRADAS_PCB * TAMANO_ENTRADA_PCB; i++)
   {
-    if (i == cont){ //si estoy al inicio de una de las entradas
+    if (i == cont)
+    {                     //si estoy al inicio de una de las entradas
       if (buffer[i] == 0) //si el proceso esta en ejecucion (bit validez = 1)
       {
-        printf("encontre la entrada %d vacia\n", cont/256);
+        printf("encontre la entrada %d vacia\n", cont / 256);
         int uno = 1;
-        fseek(memory_file, i*sizeof(char),SEEK_SET);
+        fseek(memory_file, i * sizeof(char), SEEK_SET);
         fwrite(&uno, sizeof(char), 1, memory_file);
-        fseek(memory_file, (i+1)*sizeof(char),SEEK_SET);
+        fseek(memory_file, (i + 1) * sizeof(char), SEEK_SET);
         fwrite(&process_id, sizeof(char), 1, memory_file);
         for (int j = 0; j < strlen(process_name); j++)
         {
           char letter = (char)process_name[j];
-          fseek(memory_file, (i+2+j)*sizeof(char),SEEK_SET);
+          fseek(memory_file, (i + 2 + j) * sizeof(char), SEEK_SET);
           fwrite(&letter, sizeof(char), 1, memory_file);
-
         }
         continue;
       }
-    cont += sum;
+      cont += sum;
     }
   }
   fclose(memory_file);
 }
 // Retorna indice de primera subentrada vacia de PCB para un proceso process_id
-int buscar_primer_espacio_vacio_pcb(int process_id) {
-  for (int i = 0; i < TAMANO_ENTRADA_PCB* N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
+int buscar_primer_espacio_vacio_pcb(int process_id)
+{
+  for (int i = 0; i < TAMANO_ENTRADA_PCB * N_ENTRADAS_PCB; i += TAMANO_ENTRADA_PCB)
   {
-    if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
-      if ((buffer[i + 1] == process_id) && (buffer[i])){
+    if (i == 0 || !(i % TAMANO_ENTRADA_PCB))
+    {
+      if ((buffer[i + 1] == process_id) && (buffer[i]))
+      {
         int inicio = i + 14;
         for (int k = inicio; k < (i + 14 + 210); k += TAMANO_SUBENTRADA_PCB)
         {
-          if (((k - inicio) == 0) || !((k - inicio) % (TAMANO_SUBENTRADA_PCB))){
-            if (!buffer[k]){
+          if (((k - inicio) == 0) || !((k - inicio) % (TAMANO_SUBENTRADA_PCB)))
+          {
+            if (!buffer[k])
+            {
               printf("Se encontró exitosamente una subentrada no ocupada para el archivo en el proceso %d\n", process_id);
               printf("%d\n", buffer[k]);
               return k;
@@ -473,72 +484,74 @@ int buscar_primer_espacio_vacio_pcb(int process_id) {
   printf("Error: No se encontraron espacios libres para el proceso %d para crear un archivo en él\n", process_id);
   return 0;
 }
-int obtener_offset_archivo(unsigned char * bytes) {
+int obtener_offset_archivo(unsigned char *bytes)
+{
   int offset = 0;
-  offset += ((bytes[3] >> 7) & 1)*pow(2,0);
-  offset += ((bytes[3] >> 6) & 1)*pow(2,1);
-  offset += ((bytes[3] >> 5) & 1)*pow(2,2);
-  offset += ((bytes[3] >> 4) & 1)*pow(2,3);
-  offset += ((bytes[3] >> 3) & 1)*pow(2,4);
-  offset += ((bytes[3] >> 2) & 1)*pow(2,5);
-  offset += ((bytes[3] >> 1) & 1)*pow(2,6);
-  offset += ((bytes[3] >> 0) & 1)*pow(2,7);
-  offset += ((bytes[2] >> 7) & 1)*pow(2,8);
-  offset += ((bytes[2] >> 6) & 1)*pow(2,9);
-  offset += ((bytes[2] >> 5) & 1)*pow(2,10);
-  offset += ((bytes[2] >> 4) & 1)*pow(2,11);
-  offset += ((bytes[2] >> 3) & 1)*pow(2,12);
-  offset += ((bytes[2] >> 2) & 1)*pow(2,13);
-  offset += ((bytes[2] >> 1) & 1)*pow(2,14);
-  offset += ((bytes[2] >> 0) & 1)*pow(2,15);
-  offset += ((bytes[1] >> 7) & 1)*pow(2,16);
-  offset += ((bytes[1] >> 6) & 1)*pow(2,17);
-  offset += ((bytes[1] >> 5) & 1)*pow(2,18);
-  offset += ((bytes[1] >> 4) & 1)*pow(2,19);
-  offset += ((bytes[1] >> 3) & 1)*pow(2,20);
-  offset += ((bytes[1] >> 2) & 1)*pow(2,21);
-  offset += ((bytes[1] >> 1) & 1)*pow(2,22);
+  offset += ((bytes[3] >> 7) & 1) * pow(2, 0);
+  offset += ((bytes[3] >> 6) & 1) * pow(2, 1);
+  offset += ((bytes[3] >> 5) & 1) * pow(2, 2);
+  offset += ((bytes[3] >> 4) & 1) * pow(2, 3);
+  offset += ((bytes[3] >> 3) & 1) * pow(2, 4);
+  offset += ((bytes[3] >> 2) & 1) * pow(2, 5);
+  offset += ((bytes[3] >> 1) & 1) * pow(2, 6);
+  offset += ((bytes[3] >> 0) & 1) * pow(2, 7);
+  offset += ((bytes[2] >> 7) & 1) * pow(2, 8);
+  offset += ((bytes[2] >> 6) & 1) * pow(2, 9);
+  offset += ((bytes[2] >> 5) & 1) * pow(2, 10);
+  offset += ((bytes[2] >> 4) & 1) * pow(2, 11);
+  offset += ((bytes[2] >> 3) & 1) * pow(2, 12);
+  offset += ((bytes[2] >> 2) & 1) * pow(2, 13);
+  offset += ((bytes[2] >> 1) & 1) * pow(2, 14);
+  offset += ((bytes[2] >> 0) & 1) * pow(2, 15);
+  offset += ((bytes[1] >> 7) & 1) * pow(2, 16);
+  offset += ((bytes[1] >> 6) & 1) * pow(2, 17);
+  offset += ((bytes[1] >> 5) & 1) * pow(2, 18);
+  offset += ((bytes[1] >> 4) & 1) * pow(2, 19);
+  offset += ((bytes[1] >> 3) & 1) * pow(2, 20);
+  offset += ((bytes[1] >> 2) & 1) * pow(2, 21);
+  offset += ((bytes[1] >> 1) & 1) * pow(2, 22);
   return offset;
 }
 
-
-int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
+int guardar_info_subentrada_a_struct(CrmsFile *archivo, int j)
+{
   int base, limit;
 
-  archivo -> nombre = malloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO * sizeof(unsigned char));
+  archivo->nombre = malloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO * sizeof(unsigned char));
   base = j;
   limit = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
-  archivo -> validez = buffer[base];
+  archivo->validez = buffer[base];
 
-  for (int k = base, i_file = 0; i_file < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO && k <= limit; k++, i_file++){
-    archivo ->nombre[i_file] = buffer[k + 1];
-    printf("%c", buffer[k+1]);
+  for (int k = base, i_file = 0; i_file < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO && k <= limit; k++, i_file++)
+  {
+    archivo->nombre[i_file] = buffer[k + 1];
+    printf("%c", buffer[k + 1]);
   }
-  archivo -> dir_virtual = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL* sizeof(unsigned char));
+  archivo->dir_virtual = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL * sizeof(unsigned char));
   base = base + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
   limit = base + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL;
   int li = 0;
   for (int k = base, dir_counter = 0; k < limit && dir_counter < TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; k++, dir_counter++)
   {
     li++;
-    archivo -> dir_virtual[dir_counter] = buffer[k + 1];
-    printf("%u %d\n",(unsigned char)buffer[k+1], dir_counter);
+    archivo->dir_virtual[dir_counter] = buffer[k + 1];
+    printf("%u %d\n", (unsigned char)buffer[k + 1], dir_counter);
   }
   archivo -> vpn = obtener_VPN(archivo -> dir_virtual[0], archivo -> dir_virtual[1]);
   archivo -> offset = obtener_offset_archivo(archivo ->dir_virtual);
 
-  printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> vpn));
-  printf("Archivo OFFSET "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> offset));
+  printf("Archivo VPN " BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo->vpn));
+  printf("Archivo OFFSET " BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo->offset));
 
-  archivo -> tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO* sizeof(unsigned char));
+  archivo->tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO * sizeof(unsigned char));
 
   base = j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
   limit = base + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
   for (int k = base, dir_counter = 0; k < limit && dir_counter < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; k++, dir_counter++)
   {
-    archivo -> tamano[dir_counter] = buffer[k + 1];
+    archivo->tamano[dir_counter] = buffer[k + 1];
   }
-  unsigned int size = archivo -> tamano[3] | (archivo -> tamano[2] << 8) | (archivo -> tamano[1] << 16) | (archivo -> tamano[0] << 24);
+  unsigned int size = archivo->tamano[3] | (archivo->tamano[2] << 8) | (archivo->tamano[1] << 16) | (archivo->tamano[0] << 24);
   /* unsigned int l1 = bswap_32(archivo ->tamano); */
   /* printf("%u||||\n", size);
   printf("%u||!!!\n", l1); */
@@ -548,59 +561,62 @@ int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
   return 1;
 }
 
-int is_bigendian() 
+int is_bigendian()
 {
   unsigned int i = 1;
-  char *c = (char*)&i;
-  if (*c){
+  char *c = (char *)&i;
+  if (*c)
+  {
     return 0;
   }
   return 1;
 }
-int obtener_dir_virtual_new_file(int idx_proceso, int idx_primer_indice_libre){
+int obtener_dir_virtual_new_file(int idx_proceso, int idx_primer_indice_libre)
+{
 
   // Esto está siendo revisado
   // Obtener el número de archivo, para acceder luego a esa posicion en la tabla de páginas.
-  int n_archivo = (idx_primer_indice_libre - idx_proceso - 13)/21;
+  int n_archivo = (idx_primer_indice_libre - idx_proceso - 13) / 21;
   // llegar a posición de tabla de páginas
-  fseek(memory_file, (idx_proceso + 13 + 10*21 + n_archivo), SEEK_SET);
+  fseek(memory_file, (idx_proceso + 13 + 10 * 21 + n_archivo), SEEK_SET);
   unsigned char entrada_tabla_paginas;
   fread(&entrada_tabla_paginas, sizeof(unsigned char), 1, memory_file);
-  printf("%c, %x\n",entrada_tabla_paginas, entrada_tabla_paginas);
+  printf("%c, %x\n", entrada_tabla_paginas, entrada_tabla_paginas);
   /* printf("%x|\n", bswap_32(entrada_tabla_paginas)); */
   /* if (!is_bigendian) entrada_tabla_paginas = bswap_32(entrada_tabla_paginas); */
   /* printf("%x||\n", (bswap_32(entrada_tabla_paginas) >> 7) & 0x01); */
-  
-  fseek(memory_file,0,SEEK_SET); 
-  
+
+  fseek(memory_file, 0, SEEK_SET);
+
   printf("%d %d %d\n", n_archivo, idx_primer_indice_libre, idx_proceso);
 }
-void cr_finish_process(int process_id) 
+void cr_finish_process(int process_id)
 {
-  fseek(memory_file, 0 ,SEEK_SET);
-  fread(buffer,sizeof(buffer),1,memory_file);
+  fseek(memory_file, 0, SEEK_SET);
+  fread(buffer, sizeof(buffer), 1, memory_file);
   int cont = 0;
   int sum = 256;
   int cero = 0;
 
-  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++)
+  for (int i = 0; i < N_ENTRADAS_PCB * TAMANO_ENTRADA_PCB; i++)
   {
-    if (i == cont){ //si estoy al inicio de una de las entradas
+    if (i == cont)
+    {                     //si estoy al inicio de una de las entradas
       if (buffer[i] == 1) //si el proceso esta en ejecucion (bit validez = 1)
       {
-        if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
+        if (buffer[i + 1] == process_id) //si encuentro el proceso correspondiente
         {
           printf("\nENTREEEEEEEEE\n");
-          fseek(memory_file, i*sizeof(char),SEEK_SET);
+          fseek(memory_file, i * sizeof(char), SEEK_SET);
           fwrite(&cero, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
           // INVALIDAR PROCESO EN FRAME BITMAP
           // 10 entradas archivos
-          for (int k = 0; k < 10*21; k+=21)
+          for (int k = 0; k < 10 * 21; k += 21)
           {
-            if (buffer[i+14+k] == 1)
+            if (buffer[i + 14 + k] == 1)
             {
               // printf("lugar validez  \n%d\n", i+14+k);
-              fseek(memory_file, (i+14+k)*sizeof(char),SEEK_SET);
+              fseek(memory_file, (i + 14 + k) * sizeof(char), SEEK_SET);
               fwrite(&cero, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
               // dirección virtual
               // printf("\n");
@@ -609,11 +625,11 @@ void cr_finish_process(int process_id)
               //   printf("%c", buffer[a]);
               // }
               // printf("\n");
-              
+
               unsigned char bytes[4];
               for (int j = 0; j < 4; j++)
               {
-                bytes[j] = buffer[i+31+k+j];
+                bytes[j] = buffer[i + 31 + k + j];
                 // printf("lugar i byte  \n%d\n", i+31+k+j);
               };
               // printf("byte 0 %u\n", (bytes[0]));
@@ -626,11 +642,11 @@ void cr_finish_process(int process_id)
               // printf("bit 3 \n%u\n", (bytes[0] >> 7) & 1);
               // printf("bit 4 \n%u\n", (bytes[1] >> 0) & 1);
               int vpn = 0;
-              vpn += ((bytes[1] >> 0) & 1)*pow(2,0);
-              vpn += ((bytes[0] >> 7) & 1)*pow(2,1);
-              vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
-              vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
-              vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
+              vpn += ((bytes[1] >> 0) & 1) * pow(2, 0);
+              vpn += ((bytes[0] >> 7) & 1) * pow(2, 1);
+              vpn += ((bytes[0] >> 6) & 1) * pow(2, 2);
+              vpn += ((bytes[0] >> 5) & 1) * pow(2, 3);
+              vpn += ((bytes[0] >> 4) & 1) * pow(2, 4);
               printf("VPN %d\n", vpn);
               // int offset = 0;
               // offset += ((bytes[3] >> 7) & 1)*pow(2,0);
@@ -657,37 +673,35 @@ void cr_finish_process(int process_id)
               // offset += ((bytes[1] >> 2) & 1)*pow(2,21);
               // offset += ((bytes[1] >> 1) & 1)*pow(2,22);
               // printf("OFFSET %d\n", offset);
-              unsigned char byte_tabla = buffer[i+224+vpn];
+              unsigned char byte_tabla = buffer[i + 224 + vpn];
               printf("byte %d\n", byte_tabla);
               int pfn = 0;
               int validation = (byte_tabla >> 0) & 1;
-              printf("validation %d\n" , validation);
-              pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
-              pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
-              pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
-              pfn += ((byte_tabla >> 4) & 1)*pow(2,3);
-              pfn += ((byte_tabla >> 3) & 1)*pow(2,4);
-              pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
-              pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
-              
+              printf("validation %d\n", validation);
+              pfn += ((byte_tabla >> 7) & 1) * pow(2, 0);
+              pfn += ((byte_tabla >> 6) & 1) * pow(2, 1);
+              pfn += ((byte_tabla >> 5) & 1) * pow(2, 2);
+              pfn += ((byte_tabla >> 4) & 1) * pow(2, 3);
+              pfn += ((byte_tabla >> 3) & 1) * pow(2, 4);
+              pfn += ((byte_tabla >> 2) & 1) * pow(2, 5);
+              pfn += ((byte_tabla >> 1) & 1) * pow(2, 6);
+
               printf("pfn %d\n", pfn);
-              int byte_bitmap = floor(pfn/8);
+              int byte_bitmap = floor(pfn / 8);
               printf("byte index %d\n", byte_bitmap);
-              unsigned char byte = buffer[byte_bitmap+4096];
+              unsigned char byte = buffer[byte_bitmap + 4096];
               printf("byte %u\n", byte);
-              int dif = pfn - byte_bitmap*8;
+              int dif = pfn - byte_bitmap * 8;
               printf("dif %u\n", dif);
               unsigned char byte_write = byte & (!(0x01 << dif));
               printf("byte write %u\n", byte_write);
               //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
               //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
-
-
             };
           }
         }
       }
-    cont += sum;
+      cont += sum;
     }
   }
 }
@@ -695,15 +709,18 @@ void cr_finish_process(int process_id)
 void print_memory(char* filename){
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
+
   int cont = 0;
   int sum = 256;
   int num = 1;
 
-  for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++){
-    if (i == cont){ 
-        printf("\n [Entrada: %d] \n",num);
-    cont += sum;
-    num +=1;
+  for (int i = 0; i < N_ENTRADAS_PCB * TAMANO_ENTRADA_PCB; i++)
+  {
+    if (i == cont)
+    {
+      printf("\n [Entrada: %d] \n", num);
+      cont += sum;
+      num += 1;
     }
     printf("%d", buffer[i]);
   }
@@ -717,27 +734,26 @@ void print_page_table(char* filename){
   int cont = 224;
   int sum = 256;
   int num = 0;
-  for (int j = 0; j <16; j+=1)
+  for (int j = 0; j < 16; j += 1)
   {
     printf("\n [Proceso %d] \n", j);
-    for(int i = (inicio + j*sum); i < (inicio + 32+ j*sum); i++){
-  
-    int pfn = 0;
-    int validation = ((buffer[i] >> 0) & 1) !=0; //primer bit
-    pfn += ((buffer[i] >> 7) & 1)*pow(2,0);
-    pfn += ((buffer[i] >> 6) & 1)*pow(2,1);
-    pfn += ((buffer[i] >> 5) & 1)*pow(2,2);
-    pfn += ((buffer[i] >> 4) & 1)*pow(2,3);
-    pfn += ((buffer[i] >> 3) & 1)*pow(2,4);
-    pfn += ((buffer[i] >> 2) & 1)*pow(2,5);
-    pfn += ((buffer[i] >> 1) & 1)*pow(2,6);
-    printf("i: %d validation %d: pfn %d\n", i, validation, pfn);
-  }
-    cont = inicio + j*sum;
-  }
-  
-}
+    for (int i = (inicio + j * sum); i < (inicio + 32 + j * sum); i++)
+    {
 
+      int pfn = 0;
+      int validation = ((buffer[i] >> 0) & 1) != 0; //primer bit
+      pfn += ((buffer[i] >> 7) & 1) * pow(2, 0);
+      pfn += ((buffer[i] >> 6) & 1) * pow(2, 1);
+      pfn += ((buffer[i] >> 5) & 1) * pow(2, 2);
+      pfn += ((buffer[i] >> 4) & 1) * pow(2, 3);
+      pfn += ((buffer[i] >> 3) & 1) * pow(2, 4);
+      pfn += ((buffer[i] >> 2) & 1) * pow(2, 5);
+      pfn += ((buffer[i] >> 1) & 1) * pow(2, 6);
+      printf("i: %d validation %d: pfn %d\n", i, validation, pfn);
+    }
+    cont = inicio + j * sum;
+  }
+}
 
 void print_frame_bitmap(char* filename){
   fseek(memory_file, 0 ,SEEK_SET);
@@ -746,34 +762,33 @@ void print_frame_bitmap(char* filename){
   int cont = 4096;
   int num = 0;
 
-  for(int i = inicio; i < inicio + 16; i++){
-    if (i == cont){ 
-        printf("\n [Entrada: %d] \n",num);
-        
-    cont += 1;
-    num +=1;
+  for (int i = inicio; i < inicio + 16; i++)
+  {
+    if (i == cont)
+    {
+      printf("\n [Entrada: %d] \n", num);
+
+      cont += 1;
+      num += 1;
     }
-    int bit0 =  ((buffer[i] >> 0) & 1) !=0; //primer bit
+    int bit0 = ((buffer[i] >> 0) & 1) != 0; //primer bit
     printf("bit0 %d\n", bit0);
-    int bit1 = ((buffer[i] >> 7) & 1)!=0;
+    int bit1 = ((buffer[i] >> 7) & 1) != 0;
     printf("bit1 %d\n", bit1);
-    int bit2 = ((buffer[i] >> 6) & 1)!=0;
+    int bit2 = ((buffer[i] >> 6) & 1) != 0;
     printf("bit2 %d\n", bit2);
-    int bit3 =  ((buffer[i] >> 5) & 1)!=0;
+    int bit3 = ((buffer[i] >> 5) & 1) != 0;
     printf("bit3 %d\n", bit3);
-    int bit4 = ((buffer[i] >> 4) & 1)!=0;
+    int bit4 = ((buffer[i] >> 4) & 1) != 0;
     printf("bit4 %d\n", bit4);
-    int bit5 =  ((buffer[i] >> 3) & 1)!=0;
+    int bit5 = ((buffer[i] >> 3) & 1) != 0;
     printf("bit5 %d\n", bit5);
-    int bit6 =  ((buffer[i] >> 2) & 1)!=0;
+    int bit6 = ((buffer[i] >> 2) & 1) != 0;
     printf("bit6 %d\n", bit6);
-    int bit7 =  ((buffer[i] >> 1) & 1)!=0;
+    int bit7 = ((buffer[i] >> 1) & 1) != 0;
     printf("bit7 %d\n", bit7);
   }
 }
-
-
-
 
 /*Funcion para liberar memoria de un archivo perteneciente al proceso con id process id. 
 Para esto el archivo debe dejar de aparecer en la memoria virtual del proceso, 
@@ -837,36 +852,38 @@ void cr_delete_file(CrmsFile* file_desc)
     printf("Archivo eliminado correctamente\n");
   }
 
-
-void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre, int idx_proceso){
+void guardar_info_new_file_a_archivo(CrmsFile *archivo, int idx_primer_indice_libre, int idx_proceso)
+{
   // Esto está siendo revisado
   obtener_dir_virtual_new_file(idx_proceso, idx_primer_indice_libre);
   char validation[4];
-  sprintf(validation, "%d", archivo ->validez);
+  sprintf(validation, "%d", archivo->validez);
   printf("%s\n", validation);
   // Escribir byte de validez.
-  fseek(memory_file, (idx_primer_indice_libre) * sizeof(char) ,SEEK_SET);
+  fseek(memory_file, (idx_primer_indice_libre) * sizeof(char), SEEK_SET);
   fwrite(&validation, sizeof(char), 1, memory_file);
 
   // Escribir nombre de crmsfile a archivo .bin
   for (int idx_nombre = 0; idx_nombre < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; idx_nombre++)
   {
-    fwrite(&(archivo -> nombre[idx_nombre]), sizeof(char), 1, memory_file);
+    fwrite(&(archivo->nombre[idx_nombre]), sizeof(char), 1, memory_file);
   }
   // Escribir tamaño 0
   for (int idx_tamano = 0; idx_tamano < TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO; idx_tamano++)
   {
-    fwrite(&(archivo ->tamano), sizeof(char), 1, memory_file);
+    fwrite(&(archivo->tamano), sizeof(char), 1, memory_file);
   }
   /* fclose(memory_file); */
 }
 
-CrmsFile * cr_open(int process_id, char * file_name, char mode){
-  if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO) {
+CrmsFile *cr_open(int process_id, char *file_name, char mode)
+{
+  if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO)
+  {
     printf("Error: El nombre de archivo ingresado supera los 12 bytes");
     return 0;
   }
-  CrmsFile * archivo = malloc(sizeof(CrmsFile));
+  CrmsFile *archivo = malloc(sizeof(CrmsFile));
   int asignado = 0;
   int idx_proceso;
   int idx_subentrada = 0;
@@ -874,24 +891,29 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   {
     int errores = 0;
 
-    if (i == 0 || !(i % TAMANO_ENTRADA_PCB)){
-      if (buffer[i] && buffer[i + 1] == process_id){
+    if (i == 0 || !(i % TAMANO_ENTRADA_PCB))
+    {
+      if (buffer[i] && buffer[i + 1] == process_id)
+      {
         int inicio = i + 14; //donde empiezan las subentradas de archivos
         idx_proceso = i;
         for (int j = inicio; j <= (i + 14 + 210); j += TAMANO_SUBENTRADA_PCB) //10 entradas de 21 bits cada una
         {
           if ((j - inicio) == 0 || !((j - inicio) % TAMANO_SUBENTRADA_PCB)) //si estoy al inicio de una subentrada
           {
-            if (buffer[j] == 1)//si la subentrada es valida
+            if (buffer[j] == 1) //si la subentrada es valida
             {
               errores = 0;
-              for (int k = j, i_file = 0; k <= j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; k++, i_file++){
-                if (buffer[k + 1] != file_name[i_file]){
+              for (int k = j, i_file = 0; k <= j + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; k++, i_file++)
+              {
+                if (buffer[k + 1] != file_name[i_file])
+                {
                   errores += 1;
                 }
               }
-              
-              if (!errores && (mode == 'r')) {
+
+              if (!errores && (mode == 'r'))
+              {
                 // Si no hay errores (nombres iguales y pid iguales, entonces es el archivo buscado)
                 // Se escribe info en struct.
                 asignado = 1;
@@ -899,7 +921,8 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
                 printf("Se encontró exitosamente el archivo a leer\n");
                 return archivo;
               }
-              else if (!errores && (mode == 'w')){
+              else if (!errores && (mode == 'w'))
+              {
                 asignado = 1;
                 idx_subentrada = j;
               }
@@ -912,54 +935,59 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       }
     }
   }
-  if (!asignado && (mode == 'r')){
+  if (!asignado && (mode == 'r'))
+  {
     printf("Error de lectura: el archivo con nombre %s no pudo ser encontrado en el proceso %d\n", file_name, process_id);
     free(archivo);
   }
 
-  else if (asignado && (mode == 'w')){
+  else if (asignado && (mode == 'w'))
+  {
     printf("Error: El archivo que intenas escribir ya existe\n");
     free(archivo);
   }
 
-  else if ((!asignado) && (mode == 'w')) {
+  else if ((!asignado) && (mode == 'w'))
+  {
     // crear archivo
     int idx_primer_indice_libre = buscar_primer_espacio_vacio_pcb(process_id);
 
-    if (!idx_primer_indice_libre) {
+    if (!idx_primer_indice_libre)
+    {
       printf("Error, no se encontró subentradas libres para ese proceso\n");
       free(archivo);
     }
-    else {
+    else
+    {
       // Guardar nombre de file_name a struct archivo
-      archivo ->nombre = calloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO, sizeof(unsigned char));
+      archivo->nombre = calloc(TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO, sizeof(unsigned char));
       for (int i = 0; i < strlen(file_name) && i < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; i++)
       {
-        archivo ->nombre[i] = (unsigned char) file_name[i];
+        archivo->nombre[i] = (unsigned char)file_name[i];
       }
 
       // guardar validez y tamaño
-      archivo ->validez = 1;
-      archivo ->tamano = 0;
-      archivo ->indice_buffer = idx_primer_indice_libre;
+      archivo->validez = 1;
+      archivo->tamano = 0;
+      archivo->indice_buffer = idx_primer_indice_libre;
       // FALTA AÑADIR DIRECCION VIRTUAL
       // Dir fisica es: PFN + Offset
-      // Obtener VPN -> 
+      // Obtener VPN ->
       // Construir dir virtual: VPN + Offset
 
       guardar_info_new_file_a_archivo(archivo, idx_primer_indice_libre, idx_proceso);
 
-      printf("Se creó exitosamente el archivo con nombre %s\n", archivo ->nombre);
+      printf("Se creó exitosamente el archivo con nombre %s\n", archivo->nombre);
       return archivo;
     }
-    
   }
 }
 
-int liberar_memoria_archivo(CrmsFile * archivo) {
-  free(archivo ->nombre);
-  free(archivo ->dir_virtual);
-  free(archivo ->tamano);
+int liberar_memoria_archivo(CrmsFile *archivo)
+{
+  free(archivo->nombre);
+  free(archivo->dir_virtual);
+  free(archivo->tamano);
   free(archivo);
   return 1;
 }
@@ -975,6 +1003,59 @@ void cr_close(CrmsFile* file_desc){
         printf("el archivo no estaba abierto \n");
     }
 }
+
+// int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
+// {
+//   unsigned char *inicio;
+//   unsigned char *bytes;
+//   FILE *archivo = fopen(file_desc->nombre, "r");
+  
+//   // No necesariamente esta en el numero n_frames por tamaño, puede que parta en la mitad de otro
+//   float n_frames = (float) file_desc->tamano / (float)2048;
+
+//   fseek(memory_file, /* llegar al inicio del frame_inicial del archivo (saltarte el bitmap y todas esas tonteras (pcb) y el pfn del frame inicial)*/, SEEK_SET);
+
+//   if (file_desc->tamano < n_bytes * /* bytes*/)
+//   {
+//     /* Revisa que los bytes a leer sean menor a los del archivo, 
+//       si no cambia el valor de bytes a leer por el tamaño del archivo */
+//     n_bytes = file_desc->tamano;
+//   }
+
+//   if (file_desc->bytes_leidos != 0)
+//   {
+//     /* mover puntero n bytes*/
+//     for (int i = 0; i < file_desc->bytes_leidos; i++)
+//     {
+//       if (/* paso al siguiente fram */)
+//       {
+//         fseek(memory_file, /* saltar a sig frame */, SEEK_CUR);
+//       }
+//       fseek(memory_file, 1, SEEK_CUR);
+//     }
+//   }
+
+//   int bytes_ya_leidos = 0;
+
+//   for (int i = 0; i < n_bytes; i++)
+//   {
+//     /* code */
+//     if (/* pasa a siguiente frame */)
+//     {
+//       fseek(memory_file, /* saltar al inicio del sig frame, saltarse pfn*/, SEEK_CUR);
+//     }
+//     if (/* termino archivo */)
+//     {
+//       break;
+//     }
+//     fseek(memory_file, 1, SEEK_CUR);
+//     fread(p_buffer, 1, 1, memory_file);
+//     bytes_ya_leidos++;
+//   }
+
+//   return bytes_ya_leidos;
+// }
+
 
 int main(int argc, char **argv)
 {
