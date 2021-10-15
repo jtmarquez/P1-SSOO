@@ -925,7 +925,7 @@ int main(int argc, char **argv)
   cr_finish_process(28);
   print_memory(filename);
   cr_ls_files(200);
-  printf("-------Ejecutando la funcion cr_open-----------\n");
+  printf("-------Ejecutando la funcion cr_open------------\n");
   CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
   liberar_memoria_archivo(archivo);
   fclose(memory_file);
