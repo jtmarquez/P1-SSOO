@@ -44,7 +44,7 @@ archivo* ordenar_archivos(archivo* lista_files, int N)
               lista_files[i] = lista_files[j];    
               lista_files[j] = elem_temp;    
             }   
-          else if (lista_files[i].inicio == lista_files[j].inicio) //en caso de que haya un empate
+          else if (lista_files[i].vpn == lista_files[j].vpn) //en caso de que haya un empate
           {
             if (lista_files[i].direccion_virtual > lista_files[j].direccion_virtual) //desempate por dir virtual
               {
@@ -771,17 +771,17 @@ int liberar_memoria_archivo(CrmsFile * archivo) {
   return 1;
 }
 
-lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
+lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* lista)
 {
   fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
   fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
   
-  int cont_archivos = 0;
+  int cont = 0;
   lista_archivos* lista_files= calloc(1, sizeof(lista_archivos)); //pido espacio para la lista de archivos
-  lista_files-> files = calloc(10, sizeof(archivo)) //pido espacio para los archivos de adentro
+  lista_files-> files = calloc(10, sizeof(archivo)); //pido espacio para los archivos de adentro
   for (int k=0; k<15; k+=1) //for que recorre los 16 procesos
   {
-    if (buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id) //si es el proceso que busco
+    if (buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id & buffer[(k*TAMANO_ENTRADA_PCB)] == 1) //si es el proceso que busco y es valido
     {
       for (int i=0; i<10; i+=1 ) //recorro los distintos archivos
     {
@@ -791,17 +791,17 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
       // - i * TAMANO_SUBENTRADA_PCB: voy de entrada en entrada, primero 14 + 0, 14 + 21, etc..
       if (buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB]!=0) //solo considero los archivos validos
       {
-        unsigned char dir_virtual[4]; //direccion virtual de 4 bytes
+        unsigned char dir_virtual_buff[4]; //direccion virtual de 4 bytes
         for (int j=0; j<4; j+=1){dir_virtual_buff[j] = buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB + j];} //guardo los 4 bytes
         //creo struct para el archivo
         archivo* file = calloc(1, sizeof(archivo)); //archivo
         //obtengo vpn
         int vpn = 0;
-        vpn += ((bytes[1] >> 0) & 1)*pow(2,0);
-        vpn += ((bytes[0] >> 7) & 1)*pow(2,1);
-        vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
-        vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
-        vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
+        vpn += ((dir_virtual_buff[1] >> 0) & 1)*pow(2,0);
+        vpn += ((dir_virtual_buff[0] >> 7) & 1)*pow(2,1);
+        vpn += ((dir_virtual_buff[0] >> 6) & 1)*pow(2,2);
+        vpn += ((dir_virtual_buff[0] >> 5) & 1)*pow(2,3);
+        vpn += ((dir_virtual_buff[0] >> 4) & 1)*pow(2,4);
 
         file->vpn = vpn; //guardo el vpn en el struct
 
@@ -822,7 +822,7 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
         //ACA ME FALTA GUARDAR EL TAMANO DEL ARCHIVO !!!!!
 
         //en teoria una vez que llego aca tengo un archivo con su id, vpn y dir_virtual en int
-        lista_files[cont] = file; //agrego el struct a la lista
+        lista_files->files[cont] = *file; //agrego el struct a la lista
 
         cont+=1; //sumo 1 a la cantidad de procesos
       }
@@ -836,12 +836,12 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
     int pag_actual = -1; //variable auxiliar
     int restante = ESPACIO_PAGINA; //variable auxiliar
     int bytes_pendientes = 0;
-    archivo* elemento; //archivo actual
+    archivo elemento; //archivo actual
 
     for (int i=0; i<10; i+=1)
       {
         elemento = lista_files->files[i]; //obtengo el archivo
-        if (pag_actual == -1 || ocupado = 0) //si es el primer archivo o estoy al inicio de una pagina
+        if (pag_actual == -1 || restante == ESPACIO_PAGINA) //si es el primer archivo o estoy al inicio de una pagina
         {   pag_actual = elemento.vpn; //actualizo la pagina
 
            if (elemento.size < ESPACIO_PAGINA)//reviso si cabe en la pagina
@@ -861,18 +861,20 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
            {
              elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
              bytes_pendientes = elemento.size - ESPACIO_PAGINA; //bytes que faltan por escribir
-             for (int j=0; j<10-i; j+=1) //recorro las paginas siguientes hasta guardar el archivo
+             
+             for (int j=0; j<32-pag_actual; j+=1) //recorro las paginas siguientes hasta guardar el archivo
              {
                if (bytes_pendientes <= ESPACIO_PAGINA)//reviso si cabe en la pagina
                 {
                   pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
+                  restante = ESPACIO_PAGINA; //pagina nueva
                   elemento.pagina_final = pag_actual;//guardo su pagina final 
                   restante-= bytes_pendientes; //guardo lo que queda de pagina
-                  bytes_pendientes = 0;
                   if(bytes_pendientes == ESPACIO_PAGINA){
                     pag_actual +=1; //si complete la pagina me muevo a la siguiente
                     restante = ESPACIO_PAGINA;} //reseteo el espacio disponible
-                  // !!!!!!!!!!!!!!!!!!!!ROMPER EL FOR!!!!!!!!!!!!!!!!!!!!!
+                  bytes_pendientes = 0;
+                  continue;
                 }
                 else //si no cabe en la pagina
                 {
@@ -881,7 +883,6 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
                 }
                
              } 
-             restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
               
            }
 
@@ -905,10 +906,11 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
             {
               elemento.pagina_inicio = pag_actual;//guardo su pagina inicial 
               bytes_pendientes = elemento.size - restante; //bytes que faltan por escribir
-              for (int j=0; j<10-i; j+=1) //recorro las paginas siguientes hasta guardar el archivo
+              for (int j=0; j<32-pag_actual; j+=1) //recorro las paginas siguientes hasta guardar el archivo
               {
                 if (bytes_pendientes <= ESPACIO_PAGINA)//reviso si cabe en la pagina
                 {
+                  restante = ESPACIO_PAGINA; //pase a una pagina nueva
                   pag_actual = elemento.vpn + 1; //actualizo la pagina actual disponible
                   elemento.pagina_final = pag_actual;//guardo su pagina final 
                   restante-= bytes_pendientes; //guardo lo que queda de pagina
@@ -925,7 +927,6 @@ lista_archivos* ordenar_archivos(int process_id, lista_direcciones* lista)
                 }
                 
               } 
-              restante  = ESPACIO_PAGINA; //reseteo el espacio disponible
            }
       }
 

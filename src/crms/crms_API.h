@@ -69,6 +69,6 @@ typedef struct file {
 }archivo;
 
 typedef struct lista_files{
-    archivo* files[10]; 
+    archivo* files; 
     //lista con los archivos
 }lista_archivos;
