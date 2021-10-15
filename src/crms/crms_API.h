@@ -38,7 +38,8 @@ typedef struct Archivos
     unsigned char validez;
     unsigned char * nombre;
     unsigned char * tamano;
-    unsigned char * dir_virtual;   
+    unsigned char * dir_virtual;
+    unsigned char * dir_virtual_int;   
     unsigned char * dir_fisica;
 }CrmsFile;
 
@@ -52,12 +53,7 @@ typedef struct Proceso
 
 }Entrada;
 
-typedef struct Lista {
-    int cantidad;
-    int* archivos[10][2];
 
-
-}lista_direcciones;
 
 typedef struct file {
     int id;
