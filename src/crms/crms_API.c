@@ -587,58 +587,10 @@ Para esto el archivo debe dejar de aparecer en la memoria virtual del proceso,
 ademas, si los frames quedan totalmente libres se debe indicar en el frame bitmap 
 que ese frame ya no esta siendo utilizado e invalidar la entrada correspondiente en la tabla de paginas.*/
 
-// void cr_delete_file(CrmsFile* file_desc)
-//   {
-//     fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
-//     fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
-//     int inicio_archivo = file_desc.indice_buffer;//encuentro el inicio del archivo que quiero
-//     int zero = 0;
-//     fseek(memory_file, inicio_archivo*sizeof(char),SEEK_SET);
-//     printf("pos inicio archivo es: %d\n ", inicio_archivo);
-//     printf("ahi encontre: %d\n ", buffer[inicio_archivo]);
-//     fwrite(&zero, sizeof(char), 1, memory_file); //pongo en 0 el bit de validez del archivo en mem virtual
-//     //me paro en la direccion virtual
-//     unsigned char bytes[4]; //para los 4 bytes de la dir virtual
-//     for (int i = 0; i <4; i+=1)
-//       {
-//         bytes[i] = buffer[inicio_archivo + 17 + i] //bytes de dir virtual
-//       }
-//     int vpn = 0; //vpn segundos 4 bits de primer byte + primer bit del primer byte
-//     vpn += (((bytes[1] >> 0) & 1)!=0) *pow(2,0);
-//     vpn += (((bytes[0] >> 7) & 1)!=0)*pow(2,1);
-//     vpn += (((bytes[0] >> 6) & 1)!=0)*pow(2,2);
-//     vpn += (((bytes[0] >> 5) & 1)!=0)*pow(2,3);
-//     vpn += (((bytes[0] >> 4) & 1)!=0)*pow(2,4);
-//     printf("VPN %d\n", vpn); //obtengo el vpn
-
-//     unsigned char byte_tabla_pags = buffer[4096 + vpm] -> pagina;
-//     printf("byte %d\n", byte_tabla);
-
-//     //obtengo el pfn
-//     int pfn = 0;
-//     int validation = ((byte_tabla >> 0) & 1) !=0; //primer bit
-//     printf("validation %d\n" , validation);
-//     pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
-//     pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
-//     pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
-//     pfn += ((byte_tabla >> 4) & 1)*pow(2,3);
-//     pfn += ((byte_tabla >> 3) & 1)*pow(2,4);
-//     pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
-//     pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
-//     printf("pfn %d\n", pfn);
-
-//     /*int byte_bitmap = floor(pfn/8); //encuentro en que byte esta el frame
-//     printf("byte index %d\n", byte_bitmap);
-//     unsigned char byte = buffer[byte_bitmap+4000];
-//     printf("byte %u\n", byte);
-//     int dif = pfn - byte_bitmap*8;
-//     printf("dif %u\n", dif);
-//     unsigned char byte_write = byte & (!(1 << dif));
-//     printf("byte write %u\n", byte_write);
-//     //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
-//     //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
-//     //obtengo la dir fisica*/
-//   }
+void cr_delete_file(CrmsFile* file_desc)
+  {
+  
+  }
 
 
 void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre, int idx_proceso){
@@ -792,6 +744,7 @@ lista_archivos* ordenar_archivos_proceso(int process_id)
         for (int j=0; j<4; j+=1){dir_virtual_buff[j] = buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB + j + 17];} //guardo los 4 bytes de dir virtual
         //creo struct para el archivo
         archivo* file = calloc(1, sizeof(archivo)); //archivo
+        file->pos_relativa = (k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB);
         //obtengo vpn
         unsigned char vpn= obtener_VPN(dir_virtual_buff[0], dir_virtual_buff[1]);
         // int vpn = 0;
