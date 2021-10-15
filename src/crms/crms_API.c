@@ -319,6 +319,13 @@ unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_d
   return p51;
 }
 
+unsigned char get_last_n_bits(unsigned char byte, int n){
+  // queremos obtener los 7 últimos bits.
+  unsigned char mask = (1 << n) - 0x01;
+  unsigned char pfn = byte & mask;
+  return pfn;
+}
+
 int guardar_info_subentrada_a_struct(CrmsFile *archivo, int j)
 {
   int base, limit;
@@ -531,7 +538,6 @@ void print_memory(char* filename){
     printf("%d", buffer[i]);
   }
 }
-
 
 void print_page_table(char* filename){
   fseek(memory_file, 0 ,SEEK_SET);
@@ -997,57 +1003,83 @@ void cr_close(CrmsFile* file_desc){
     }
 }
 
-// int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
-// {
-//   unsigned char *inicio;
-//   unsigned char *bytes;
-//   FILE *archivo = fopen(file_desc->nombre, "r");
+int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
+{
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file);
+
+  lista_archivos* lista = ordenar_archivos_proceso(file_desc->id_proceso);
+  int indice_lista;
+  int archivo_valido = 0;
+  FILE *archivo = fopen(file_desc->nombre, "r");
+  int bytes_ya_leidos = 0;
+  unsigned char información;
+  int indice = 4096 + 16 + lista->files[indice_lista].pos_relativa + 1;
+
+
+  // buscar archivo en lista_archivos
+  for (int i = 0; i < 10; i++)
+  {
+    if (lista->files[i].vpn == file_desc->vpn && lista->files[i].direccion_virtual == file_desc->dir_virtual)
+    {
+      indice_lista = i;
+    }
+  }
+
+  // Reviso si el archivo está valido
+  if (lista->files[indice_lista].validez == 0)
+  {
+    int archivo_valido = 1;
+  }
+
+  // Si el archivo es valido
+  if (!archivo_valido)
+  {
+    // Si el tamaño del archivo es menor a los bytes cambiar valor
+    if ((int)file_desc->tamano - file_desc->bytes_leidos < n_bytes)
+    {
+      n_bytes = (int)file_desc->tamano;
+    }
   
-//   // No necesariamente esta en el numero n_frames por tamaño, puede que parta en la mitad de otro
-//   float n_frames = (float) file_desc->tamano / (float)2048;
+    // Si ya se han leido bytes de ese archivo
+    if (file_desc->bytes_leidos != 0)
+    {
+      /* mover puntero n bytes*/
+      for (int i = 0; i < file_desc->bytes_leidos; i++)
+      {
+        // Pasa al siguiente frame
+        if (/* paso al siguiente frame */)
+        {
+          indice++;
+        }
+        indice++;
+      }
+    }
 
-//   fseek(memory_file, /* llegar al inicio del frame_inicial del archivo (saltarte el bitmap y todas esas tonteras (pcb) y el pfn del frame inicial)*/, SEEK_SET);
-
-//   if (file_desc->tamano < n_bytes * /* bytes*/)
-//   {
-//     /* Revisa que los bytes a leer sean menor a los del archivo, 
-//       si no cambia el valor de bytes a leer por el tamaño del archivo */
-//     n_bytes = file_desc->tamano;
-//   }
-
-//   if (file_desc->bytes_leidos != 0)
-//   {
-//     /* mover puntero n bytes*/
-//     for (int i = 0; i < file_desc->bytes_leidos; i++)
-//     {
-//       if (/* paso al siguiente fram */)
-//       {
-//         fseek(memory_file, /* saltar a sig frame */, SEEK_CUR);
-//       }
-//       fseek(memory_file, 1, SEEK_CUR);
-//     }
-//   }
-
-//   int bytes_ya_leidos = 0;
-
-//   for (int i = 0; i < n_bytes; i++)
-//   {
-//     /* code */
-//     if (/* pasa a siguiente frame */)
-//     {
-//       fseek(memory_file, /* saltar al inicio del sig frame, saltarse pfn*/, SEEK_CUR);
-//     }
-//     if (/* termino archivo */)
-//     {
-//       break;
-//     }
-//     fseek(memory_file, 1, SEEK_CUR);
-//     fread(p_buffer, 1, 1, memory_file);
-//     bytes_ya_leidos++;
-//   }
-
-//   return bytes_ya_leidos;
-// }
+    for (int i = 0; i < n_bytes; i++)
+    {
+      // Pasa al siguiente frame
+      if (/* pasa a siguiente frame */)
+      {
+        indice++;
+      }
+      // Si el archivo termino
+      if ((int)file_desc->tamano == file_desc->bytes_leidos + bytes_ya_leidos)
+      {
+        break;
+      }
+      // 
+      // fread(p_buffer, 1, 1, buffer);
+      bytes_ya_leidos++;
+      indice++;
+    }
+  }
+  else{
+    printf("El archivo no es válido");
+  }
+  file_desc->bytes_leidos = file_desc->bytes_leidos + bytes_ya_leidos;
+  return bytes_ya_leidos;
+}
 
 
 int main(int argc, char **argv)
