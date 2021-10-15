@@ -35,6 +35,7 @@ typedef struct Archivos
     int id_proceso;
     unsigned char vpn;
     int offset;
+    int creado;
     unsigned char validez;
     unsigned char * nombre;
     unsigned char * tamano;

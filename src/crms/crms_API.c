@@ -5,6 +5,7 @@
 #include <math.h> 
 #include "../file_manager/manager.h"
 #include "crms_API.h"
+#include <byteswap.h>
 
 #define N_ENTRADAS_PCB 16
 #define TAMANO_ENTRADA_PCB 256
@@ -12,6 +13,7 @@
 #define TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO 12
 #define TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO 4
 #define TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL 4 
+#define TAMANO_SUBENTRADA_FRAME 8388608
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c\n"
 #define BYTE_TO_BINARY(byte)  \
   (byte & 0x80 ? '1' : '0'), \
@@ -25,6 +27,8 @@
 
 char *filename;
 FILE *memory_file;
+FILE * variable_a_hacer_free;
+char *memory_local_path;
 unsigned char buffer[5000];
 
 /*Funcion para montar la memoria.
@@ -34,7 +38,9 @@ unsigned char buffer[5000];
 
  void cr_mount(char* memory_path)
   {
+    memory_local_path = memory_path;
     memory_file = malloc(sizeof(FILE));
+    variable_a_hacer_free = memory_file;
     memory_file = (fopen(memory_path,"rb+"));
     // memory_file = (fopen(memory_path,"rb+"));
   }
@@ -192,7 +198,7 @@ void cr_start_process(int process_id, char* process_name)
     cont += sum;
     }
   }
-  fclose(memory_file);
+  /* fclose(memory_file); */
 }
 // Retorna indice de primera subentrada vacia de PCB para un proceso process_id
 int buscar_primer_espacio_vacio_pcb(int process_id) {
@@ -245,44 +251,49 @@ int obtener_offset_archivo(unsigned char * bytes) {
   return offset;
 }
 
-unsigned char obtener_VPN(CrmsFile* archivo){
-  unsigned char p5 = (archivo ->dir_virtual[0] >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
-    unsigned char p51;
-    unsigned char p9 = (archivo ->dir_virtual[1] >> 7) & 0x1;
-    unsigned char mask = (1 << 7) - 0x01;
+unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_dir_virtual){
+  unsigned char p5 = (pos_0_dir_virtual >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
+  unsigned char p51;
+  unsigned char p9 = (pos_1_dir_virtual >> 7) & 0x1;
+  unsigned char mask = (1 << 7) - 0x01;
+  if (p5) {
+    p51 = p5 | (0x01 << 4);
+  } else {
+    p51 = p5 & (!(0x01 << 4));
+  }
+  unsigned char p6 = (pos_0_dir_virtual >> 2) & 0x1; // segundo digito
+  if (p6) {
+    p51 = p51 | (0x01 << 3);
+  } else {
+    p51 = p51 & (!(0x01 << 3));
+  }
+  unsigned char p7 = (pos_0_dir_virtual >> 1) & 0x1;; // tercer digito
+  if (p7) {
+    p51 = p51 | (0x01 << 2);
+  } else {
+    p51 = p51 & (!(0x01 << 2));
+  }
+  unsigned char p8 = (pos_0_dir_virtual >> 0) & 0x1;; // cuarto digito
+  if (p8) {
+    p51 = p51 | (0x01 << 1);
+  } else {
+    p51 = p51 & (!(0x01 << 1));
+  }
+  if (p9){
+    p51 = p51 | (0x01); // remplazar por 1
+  } else {
+    p51 = p51 & (0xFE); // reemplazar por 0
+  }
 
-    if (p5) {
-      p51 = p5 | (0x01 << 4);
-    } else {
-      p51 = p5 & (!(0x01 << 4));
-    }
-    unsigned char p6 = (archivo ->dir_virtual[0] >> 2) & 0x1; // segundo digito
-    if (p6) {
-      p51 = p51 | (0x01 << 3);
-    } else {
-      p51 = p51 & (!(0x01 << 3));
-    }
-    unsigned char p7 = (archivo ->dir_virtual[0] >> 1) & 0x1;; // tercer digito
-    if (p7) {
-      p51 = p51 | (0x01 << 2);
-    } else {
-      p51 = p51 & (!(0x01 << 2));
-    }
-    unsigned char p8 = (archivo ->dir_virtual[0] >> 0) & 0x1;; // cuarto digito
-    if (p8) {
-      p51 = p51 | (0x01 << 1);
-    } else {
-      p51 = p51 & (!(0x01 << 1));
-    }
-    if (p9){
-      p51 = p51 | (0x01); // remplazar por 1
-    } else {
-      p51 = p51 & (0xFE); // reemplazar por 0
-    }
-  
   return p51;
 }
 
+unsigned char get_last_n_bits(unsigned char byte, int n){
+  // queremos obtener los 7 últimos bits.
+  unsigned char mask = (1 << n) - 0x01;
+  unsigned char pfn = byte & mask;
+  return pfn;
+}
 int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
   int base, limit;
 
@@ -305,11 +316,11 @@ int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
     archivo -> dir_virtual[dir_counter] = buffer[k + 1];
     printf("%u %d\n",(unsigned char)buffer[k+1], dir_counter);
   }
-  archivo -> vpn = obtener_VPN(archivo);
+  archivo -> vpn = obtener_VPN(archivo ->dir_virtual[0], archivo ->dir_virtual[1]);
   archivo -> offset = obtener_offset_archivo(archivo ->dir_virtual);
 
-  printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> vpn));
-  printf("Archivo OFFSET "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> offset));
+  /* printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> vpn));
+  printf("Archivo OFFSET "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(archivo -> offset)); */
 
   archivo -> tamano = malloc(TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO* sizeof(unsigned char));
 
@@ -347,7 +358,7 @@ int obtener_dir_virtual_new_file(int idx_proceso, int idx_primer_indice_libre){
   fseek(memory_file, (idx_proceso + 13 + 10*21 + n_archivo), SEEK_SET);
   unsigned char entrada_tabla_paginas;
   fread(&entrada_tabla_paginas, sizeof(unsigned char), 1, memory_file);
-  printf("%c, %x\n",entrada_tabla_paginas, entrada_tabla_paginas);
+  /* printf("%c, %x\n",entrada_tabla_paginas, entrada_tabla_paginas); */
   /* printf("%x|\n", bswap_32(entrada_tabla_paginas)); */
   /* if (!is_bigendian) entrada_tabla_paginas = bswap_32(entrada_tabla_paginas); */
   /* printf("%x||\n", (bswap_32(entrada_tabla_paginas) >> 7) & 0x01); */
@@ -371,7 +382,7 @@ void cr_finish_process(int process_id)
       {
         if (buffer[i+1] == process_id) //si encuentro el proceso correspondiente
         {
-          printf("\nENTREEEEEEEEE\n");
+          /* printf("\nENTREEEEEEEEE\n"); */
           fseek(memory_file, i*sizeof(char),SEEK_SET);
           fwrite(&cero, sizeof(char), 1, memory_file); //invalido el proceso correspondiente
           // INVALIDAR PROCESO EN FRAME BITMAP
@@ -412,7 +423,7 @@ void cr_finish_process(int process_id)
               vpn += ((bytes[0] >> 6) & 1)*pow(2,2);
               vpn += ((bytes[0] >> 5) & 1)*pow(2,3);
               vpn += ((bytes[0] >> 4) & 1)*pow(2,4);
-              printf("VPN %d\n", vpn);
+              /* printf("VPN %d\n", vpn); */
               // int offset = 0;
               // offset += ((bytes[3] >> 7) & 1)*pow(2,0);
               // offset += ((bytes[3] >> 6) & 1)*pow(2,1);
@@ -439,10 +450,10 @@ void cr_finish_process(int process_id)
               // offset += ((bytes[1] >> 1) & 1)*pow(2,22);
               // printf("OFFSET %d\n", offset);
               unsigned char byte_tabla = buffer[i+224+vpn];
-              printf("byte %d\n", byte_tabla);
+              /* printf("byte %d\n", byte_tabla); */
               int pfn = 0;
               int validation = (byte_tabla >> 0) & 1;
-              printf("validation %d\n" , validation);
+              /* printf("validation %d\n" , validation); */
               pfn += ((byte_tabla >> 7) & 1)*pow(2,0);
               pfn += ((byte_tabla >> 6) & 1)*pow(2,1);
               pfn += ((byte_tabla >> 5) & 1)*pow(2,2);
@@ -451,15 +462,15 @@ void cr_finish_process(int process_id)
               pfn += ((byte_tabla >> 2) & 1)*pow(2,5);
               pfn += ((byte_tabla >> 1) & 1)*pow(2,6);
               
-              printf("pfn %d\n", pfn);
+              /* printf("pfn %d\n", pfn); */
               int byte_bitmap = floor(pfn/8);
-              printf("byte index %d\n", byte_bitmap);
+              /* printf("byte index %d\n", byte_bitmap); */
               unsigned char byte = buffer[byte_bitmap+4096];
-              printf("byte %u\n", byte);
+              /* printf("byte %u\n", byte); */
               int dif = pfn - byte_bitmap*8;
-              printf("dif %u\n", dif);
+              /* printf("dif %u\n", dif); */
               unsigned char byte_write = byte & (!(1 << dif));
-              printf("byte write %u\n", byte_write);
+              /* printf("byte write %u\n", byte_write); */
               //fseek(memory_file, (byte_bitmap+4000)*sizeof(char),SEEK_SET);
               //fwrite(&byte_write, sizeof(char), 1, memory_file); //invalido el archivo correspondiente
 
@@ -474,7 +485,7 @@ void cr_finish_process(int process_id)
 }
 
 void print_memory(char* filename){
-  cr_mount(filename);
+  /* cr_mount(filename); */
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
   int cont = 0;
@@ -483,17 +494,16 @@ void print_memory(char* filename){
 
   for(int i = 0; i < N_ENTRADAS_PCB*TAMANO_ENTRADA_PCB; i++){
     if (i == cont){ 
-        printf("\n [Entrada: %d] \n",num);
-    cont += sum;
-    num +=1;
+      /* printf("\n [Entrada: %d] \n",num); */
+      cont += sum;
+      num +=1;
     }
-    printf("%d", buffer[i]);
+    /* printf("%d", buffer[i]); */
   }
 }
 
-
 void print_page_table(char* filename){
-  cr_mount(filename);
+  /* cr_mount(filename); */
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
   int inicio = 224;
@@ -502,7 +512,7 @@ void print_page_table(char* filename){
   int num = 0;
   for (int j = 0; j <16; j+=1)
   {
-    printf("\n [Proceso %d] \n", j);
+    /* printf("\n [Proceso %d] \n", j); */
     for(int i = (inicio + j*sum); i < (inicio + 32+ j*sum); i++){
   
     int pfn = 0;
@@ -514,16 +524,15 @@ void print_page_table(char* filename){
     pfn += ((buffer[i] >> 3) & 1)*pow(2,4);
     pfn += ((buffer[i] >> 2) & 1)*pow(2,5);
     pfn += ((buffer[i] >> 1) & 1)*pow(2,6);
-    printf("i: %d validation %d: pfn %d\n", i, validation, pfn);
+    /* printf("i: %d validation %d: pfn %d\n", i, validation, pfn); */
   }
     cont = inicio + j*sum;
   }
-  
 }
 
 
 void print_frame_bitmap(char* filename){
-  cr_mount(filename);
+  /* cr_mount(filename); */
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
   int inicio = 4096;
@@ -538,21 +547,21 @@ void print_frame_bitmap(char* filename){
     num +=1;
     }
     int bit0 =  ((buffer[i] >> 0) & 1) !=0; //primer bit
-    printf("bit0 %d\n", bit0);
+    /* printf("bit0 %d\n", bit0); */
     int bit1 = ((buffer[i] >> 7) & 1)!=0;
-    printf("bit1 %d\n", bit1);
+    /* printf("bit1 %d\n", bit1); */
     int bit2 = ((buffer[i] >> 6) & 1)!=0;
-    printf("bit2 %d\n", bit2);
+    /* printf("bit2 %d\n", bit2); */
     int bit3 =  ((buffer[i] >> 5) & 1)!=0;
-    printf("bit3 %d\n", bit3);
+    /* printf("bit3 %d\n", bit3); */
     int bit4 = ((buffer[i] >> 4) & 1)!=0;
-    printf("bit4 %d\n", bit4);
+    /* printf("bit4 %d\n", bit4); */
     int bit5 =  ((buffer[i] >> 3) & 1)!=0;
-    printf("bit5 %d\n", bit5);
+    /* printf("bit5 %d\n", bit5); */
     int bit6 =  ((buffer[i] >> 2) & 1)!=0;
-    printf("bit6 %d\n", bit6);
+    /* printf("bit6 %d\n", bit6); */
     int bit7 =  ((buffer[i] >> 1) & 1)!=0;
-    printf("bit7 %d\n", bit7);
+    /* printf("bit7 %d\n", bit7); */
   }
 }
 
@@ -618,17 +627,9 @@ que ese frame ya no esta siendo utilizado e invalidar la entrada correspondiente
 //   }
 
 
-void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_libre, int idx_proceso){
-  // Esto está siendo revisado
-  obtener_dir_virtual_new_file(idx_proceso, idx_primer_indice_libre);
-  char validation[4];
-  sprintf(validation, "%d", archivo ->validez);
-  printf("%s\n", validation);
-  // Escribir byte de validez.
-  fseek(memory_file, (idx_primer_indice_libre) * sizeof(char) ,SEEK_SET);
-  fwrite(&validation, sizeof(char), 1, memory_file);
-
+void guardar_nombre_y_tamano_archivo(CrmsFile * archivo, int idx_primer_indice_libre){
   // Escribir nombre de crmsfile a archivo .bin
+  fseek(memory_file, idx_primer_indice_libre ,SEEK_SET); //me paro al inicio de la memoria
   for (int idx_nombre = 0; idx_nombre < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; idx_nombre++)
   {
     fwrite(&(archivo -> nombre[idx_nombre]), sizeof(char), 1, memory_file);
@@ -640,13 +641,111 @@ void guardar_info_new_file_a_archivo(CrmsFile * archivo, int idx_primer_indice_l
   }
   /* fclose(memory_file); */
 }
+int encontrar_idx_ultimo_archivo(int idx_primer_archivo_libre, int idx_proceso) {
+  int inicio = idx_proceso + 14;
+  int ultimo_archivo_idx = 0;
+  for (int i = inicio; i < (inicio + 210); i += TAMANO_SUBENTRADA_PCB)
+  {
+    if ((i - inicio) == 0 || !((i - inicio) % TAMANO_SUBENTRADA_PCB)) //si estoy al inicio de una subentrada
+    {
+      if (buffer[i] == 1){
+        ultimo_archivo_idx = i;
+      }
+      else if ((buffer[i] == 0) && (i == idx_primer_archivo_libre)){
+        // encontré el espacio libre, deberia tener un idx para el último archivo.
+        // Si no lo tengo (ultimo_archivo_idx = 0), entonces vpn = 0;
 
+        return ultimo_archivo_idx;
+      }
+    }
+  }
+}
+unsigned char encontrar_vpn_ultimo_archivo_mas_1(int idx_primer_archivo_libre, int idx_proceso){
+  // idx_proceso apunta a bit de validez del proceso
+  // 14 bits
+  fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
+  fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
+
+  int ultimo_archivo_idx = encontrar_idx_ultimo_archivo(idx_primer_archivo_libre, idx_proceso);
+  if (!ultimo_archivo_idx){
+    return 0x0;
+  } else {
+
+    /* int limit = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; */
+    int base = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
+    
+    unsigned char vpn = obtener_VPN(buffer[base], buffer[base + 1]);
+    return vpn + 0x01;
+    /* for (int i = base; i < limit; i++)
+    {
+      unsigned char vpn = obtener_VPN(buffer[i], buffer[i + 1]);
+      return vpn + 0x01;
+    } */
+  }
+}
+unsigned char * get_direccion_virtual(unsigned char vpn, unsigned char offset){
+  unsigned char * dir_vir = malloc(TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL * sizeof(unsigned char));
+  dir_vir[0] = (0b0000 << 4) | (vpn >> 1);
+  dir_vir[1] = (get_last_n_bits(vpn, 1) << 8) | (offset >> 16);
+  dir_vir[2] = get_last_n_bits((offset >> 8), 8);
+  dir_vir[3] = get_last_n_bits(offset, 8);
+  return dir_vir;
+}
+unsigned int encontrar_tamano_ultimo_archivo(int idx_primer_indice_libre, int idx_proceso){
+  // idx_proceso apunta a bit de validez del proceso
+  // 14 bits
+  fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
+  fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
+
+  int ultimo_archivo_idx = encontrar_idx_ultimo_archivo(idx_primer_indice_libre, idx_proceso);
+  if (!ultimo_archivo_idx){
+    return 0x0;
+  } else {
+
+    int base = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO;
+    int limit = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
+    unsigned char tamano[4];
+    for (int i = base, counter = 0; i < limit; i++, counter++)
+    {
+      tamano[counter] = buffer[i];
+    }
+    
+    // Ver esto de bswap
+    unsigned int tamano_int = (unsigned int)bswap_32(tamano);
+    return tamano_int;
+  }
+}
+void guardar_bit_validez(CrmsFile * archivo, int idx_subentrada_archivo, int vpn, int idx_proceso, int pfn){
+  /* unsigned char byte_validez = 0x01; */
+  int byte_validez = 1;
+  // Primero guardamos byte de validez en tabla de PCBS
+
+  //me paro en el byte de validez de la subentrada
+  fseek(memory_file, idx_subentrada_archivo ,SEEK_SET); 
+
+  // Escribimos en byte idx_subentrada_archivo
+  fwrite(&byte_validez, sizeof(int), 1, memory_file);
+
+  // Ahora guardamos byte en tabla de páginas
+  int idx_subentrada_tabla_paginas = idx_proceso + 1 + 12 + 10 * TAMANO_SUBENTRADA_PCB + vpn;
+
+  fseek(memory_file, idx_subentrada_tabla_paginas, SEEK_SET);
+  fwrite(&byte_validez, sizeof(int), 1, memory_file);
+
+  // Ahora guardamos byte en frame bitmap
+  int idx_subentrada_bitmap = 16 * TAMANO_ENTRADA_PCB + pfn;
+  fseek(memory_file, idx_subentrada_bitmap, SEEK_SET);
+  fwrite(&byte_validez, sizeof(int), 1, memory_file);
+  /* fclose(memory_file); */
+}
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
+  CrmsFile * archivo = malloc(sizeof(CrmsFile));
+  archivo -> creado = 1;
   if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO) {
     printf("Error: El nombre de archivo ingresado supera los 12 bytes");
-    return;
+    archivo ->creado = 0;
+    return archivo;
   }
-  CrmsFile * archivo = malloc(sizeof(CrmsFile));
   int asignado = 0;
   int idx_proceso;
   int idx_subentrada = 0;
@@ -694,12 +793,14 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   }
   if (!asignado && (mode == 'r')){
     printf("Error de lectura: el archivo con nombre %s no pudo ser encontrado en el proceso %d\n", file_name, process_id);
-    free(archivo);
+    archivo ->creado = 0;
+    return archivo;
   }
 
   else if (asignado && (mode == 'w')){
     printf("Error: El archivo que intenas escribir ya existe\n");
-    free(archivo);
+    archivo ->creado = 0;
+    return archivo;
   }
 
   else if ((!asignado) && (mode == 'w')) {
@@ -708,7 +809,8 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
 
     if (!idx_primer_indice_libre) {
       printf("Error, no se encontró subentradas libres para ese proceso\n");
-      free(archivo);
+      archivo ->creado = 0;
+      return archivo;
     }
     else {
       // Guardar nombre de file_name a struct archivo
@@ -717,18 +819,29 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       {
         archivo ->nombre[i] = (unsigned char) file_name[i];
       }
-
-      // guardar validez y tamaño
       archivo ->validez = 1;
-      archivo ->tamano = 0;
+      archivo ->tamano = 0x0;
       archivo ->indice_buffer = idx_primer_indice_libre;
-      // FALTA AÑADIR DIRECCION VIRTUAL
-      // Dir fisica es: PFN + Offset
-      // Obtener VPN -> 
-      // Construir dir virtual: VPN + Offset
+      unsigned char vpn = encontrar_vpn_ultimo_archivo_mas_1(idx_primer_indice_libre, idx_proceso);
+      unsigned int tamano = encontrar_tamano_ultimo_archivo(idx_primer_indice_libre, idx_proceso);
+      guardar_nombre_y_tamano_archivo(archivo, idx_primer_indice_libre);
+      int offset = (tamano >= TAMANO_SUBENTRADA_FRAME) ? (tamano - TAMANO_SUBENTRADA_FRAME) : tamano;
+      if (tamano >= TAMANO_SUBENTRADA_FRAME) {
+        offset = tamano - TAMANO_SUBENTRADA_FRAME;
+        vpn++;
+      } else {
+        offset = tamano;
+      }
+      printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(vpn));
+      int vpn_int = (int) vpn;
+      unsigned char byte = buffer[idx_proceso + 14 + 10*TAMANO_SUBENTRADA_PCB + vpn_int];
+      unsigned char pfn = get_last_n_bits(byte, 7);
+      printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(pfn));
+      printf("pfn: %i\n", (int)pfn);
 
-      guardar_info_new_file_a_archivo(archivo, idx_primer_indice_libre, idx_proceso);
-
+      archivo ->dir_virtual = get_direccion_virtual(vpn, offset);
+      // falta escribir a archivo la dirección virtual
+      guardar_bit_validez(archivo, idx_subentrada, vpn_int, idx_proceso, (int) pfn);
       printf("Se creó exitosamente el archivo con nombre %s\n", archivo ->nombre);
       return archivo;
     }
@@ -737,10 +850,14 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
 }
 
 int liberar_memoria_archivo(CrmsFile * archivo) {
-  free(archivo ->nombre);
-  free(archivo ->dir_virtual);
-  free(archivo ->tamano);
-  free(archivo);
+  if (!archivo ->creado) {
+    free(archivo);
+  } else {
+    free(archivo ->nombre);
+    free(archivo ->dir_virtual);
+    free(archivo ->tamano);
+    free(archivo);
+  }
   return 1;
 }
 
@@ -750,12 +867,12 @@ int main(int argc, char **argv)
   char *input_name;
   input_name = argv[1];
   filename = input_name;
+  cr_mount(filename);
   print_page_table(filename);
   print_frame_bitmap(filename);
   printf("\n");
   printf("-------Ejecutando la funcion cr_mount-------\n");
   printf("\n");
-  cr_mount(filename);
   printf("\n");
   printf("-------Ejecutando la funcion cr_ls_processes--------\n");
   printf("\n");
@@ -766,7 +883,7 @@ int main(int argc, char **argv)
   cr_ls_files(200);
   printf("-------Ejecutando la funcion cr_exists-----------\n");
   printf("\n");
-  int existe = cr_exists(200, "greatcat.mp4");
+  int existe = cr_exists(200, "bichota.mp4");
   if (existe){printf("si existe\n");}
   else{printf("no existe\n");}
   printf("\n");
@@ -783,6 +900,8 @@ int main(int argc, char **argv)
   print_memory(filename);
   cr_ls_files(200);
   printf("-------Ejecutando la funcion cr_open-----------\n");
-  CrmsFile * archivo = cr_open(200, "hecomes.mp4", 'r');
-  /* liberar_memoria_archivo(archivo); */
+  CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
+  liberar_memoria_archivo(archivo);
+  fclose(memory_file);
+  free(variable_a_hacer_free);
 }
