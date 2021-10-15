@@ -66,6 +66,7 @@ typedef struct file {
     int pagina_inicio;
     int pagina_final;
     int size;
+    int validez;
 }archivo;
 
 typedef struct lista_files{
