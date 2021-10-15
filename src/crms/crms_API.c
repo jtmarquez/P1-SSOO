@@ -5,7 +5,6 @@
 #include <math.h> 
 #include "../file_manager/manager.h"
 #include "crms_API.h"
-#include <byteswap.h>
 
 #define N_ENTRADAS_PCB 16
 #define TAMANO_ENTRADA_PCB 256
@@ -41,7 +40,7 @@ unsigned char buffer[5000];
     memory_local_path = memory_path;
     memory_file = malloc(sizeof(FILE));
     variable_a_hacer_free = memory_file;
-    memory_file = (fopen(memory_path,"rb+"));
+    memory_file[0] = *(fopen(memory_path,"rb+"));
     // memory_file = (fopen(memory_path,"rb+"));
   }
 
@@ -294,6 +293,14 @@ unsigned char get_last_n_bits(unsigned char byte, int n){
   unsigned char pfn = byte & mask;
   return pfn;
 }
+int convert_dir_vir_to_int(unsigned char * dir_virtual_buff){
+  unsigned long int dir_virtual = 0;
+  dir_virtual += (unsigned char) dir_virtual_buff[0] << 8 * 3;
+  dir_virtual += (unsigned char) dir_virtual_buff[1] << 8 * 2;
+  dir_virtual += (unsigned char) dir_virtual_buff[2] << 8 * 1;
+  dir_virtual += (unsigned char) dir_virtual_buff[3] << 8 * 0;
+  return dir_virtual;
+}
 int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
   int base, limit;
 
@@ -336,7 +343,7 @@ int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
   printf("%u||!!!\n", l1); */
   /* printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(size));
   printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(l1)); */
-
+  archivo -> dir_virtual_int = convert_dir_vir_to_int(archivo -> dir_virtual);
   return 1;
 }
 
@@ -711,7 +718,8 @@ unsigned int encontrar_tamano_ultimo_archivo(int idx_primer_indice_libre, int id
     }
     
     // Ver esto de bswap
-    unsigned int tamano_int = (unsigned int)bswap_32(tamano);
+    /* unsigned int tamano_int = (unsigned int)bswap_32(tamano); */
+    unsigned int tamano_int = (unsigned int)tamano;
     return tamano_int;
   }
 }
@@ -737,6 +745,16 @@ void guardar_bit_validez(CrmsFile * archivo, int idx_subentrada_archivo, int vpn
   fseek(memory_file, idx_subentrada_bitmap, SEEK_SET);
   fwrite(&byte_validez, sizeof(int), 1, memory_file);
   /* fclose(memory_file); */
+}
+void write_dir_vir_to_file(unsigned char * dir_vir, int idx_entrada_archivo){
+
+  fseek(memory_file, idx_entrada_archivo + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO, SEEK_SET);
+
+  for (int i = 0; i < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; i++)
+  {
+    fwrite(&dir_vir[i], sizeof(char), 1, memory_file);
+  }
+  fclose(memory_file);
 }
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
@@ -836,12 +854,25 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       int vpn_int = (int) vpn;
       unsigned char byte = buffer[idx_proceso + 14 + 10*TAMANO_SUBENTRADA_PCB + vpn_int];
       unsigned char pfn = get_last_n_bits(byte, 7);
-      printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(pfn));
+      printf("Archivo PFN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(pfn));
       printf("pfn: %i\n", (int)pfn);
 
       archivo ->dir_virtual = get_direccion_virtual(vpn, offset);
+      archivo -> dir_virtual_int = convert_dir_vir_to_int(archivo -> dir_virtual);
       // falta escribir a archivo la dirección virtual
+      //
+      write_dir_vir_to_file(archivo ->dir_virtual, idx_primer_indice_libre);
+
+      /* fseek(memory_file, idx_primer_indice_libre + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO, SEEK_SET);
+      unsigned char dir_try[4];
+      fread(&dir_try, 4 * sizeof(unsigned char), 1, memory_file);
+      printf("try2%x/n", archivo ->dir_virtual);
+      printf("try1%x/n", dir_try);
+      unsigned char tryu = obtener_VPN(dir_try[0], dir_try[1]);
+      printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(tryu)); */
+
       guardar_bit_validez(archivo, idx_subentrada, vpn_int, idx_proceso, (int) pfn);
+      fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
       printf("Se creó exitosamente el archivo con nombre %s\n", archivo ->nombre);
       return archivo;
     }
