@@ -771,14 +771,15 @@ int liberar_memoria_archivo(CrmsFile * archivo) {
   return 1;
 }
 
-lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* lista)
+lista_archivos* ordenar_archivos_proceso(int process_id)
 {
   fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
   fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
-  
   int cont = 0;
+  int pos = 0;
   lista_archivos* lista_files= calloc(1, sizeof(lista_archivos)); //pido espacio para la lista de archivos
   lista_files-> files = calloc(10, sizeof(archivo)); //pido espacio para los archivos de adentro
+
   for (int k=0; k<15; k+=1) //for que recorre los 16 procesos
   {
     if (buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id & buffer[(k*TAMANO_ENTRADA_PCB)] == 1) //si es el proceso que busco y es valido
@@ -804,10 +805,9 @@ lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* list
         vpn += ((dir_virtual_buff[0] >> 4) & 1)*pow(2,4);
 
         file->vpn = vpn; //guardo el vpn en el struct
-
         //guardo su id
+        //rintf("guardando el archivo con id %d\n", cont);
         file-> id = cont;
-
         //obtengo su int de dir virtual
 
         unsigned long int dir_virtual = 0;
@@ -818,17 +818,30 @@ lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* list
         dir_virtual += (unsigned char) dir_virtual_buff[3] << 8 * 0;
             
         file-> direccion_virtual = dir_virtual;
-        
         //ACA ME FALTA GUARDAR EL TAMANO DEL ARCHIVO !!!!!
 
         //en teoria una vez que llego aca tengo un archivo con su id, vpn y dir_virtual en int
         lista_files->files[cont] = *file; //agrego el struct a la lista
 
         cont+=1; //sumo 1 a la cantidad de procesos
+        pos +=1;
       }
+      // else { 
+      //   printf("aki entre\n");
+      //   archivo* file = calloc(1, sizeof(archivo)); //archivo
+      //   file->vpn = 99;
+      //   file->id = -1;
+      //   file->size = -1;
+      //   file->direccion_virtual = 0;
+      //   lista_files->files[cont] = *file; 
+      //   pos+=1;
+      //   printf("pos es %d y el id del file es %d, tengo: %d\n", pos, file->id, lista_files->files[cont].id);
+      //   }
     }
 
     archivo* lista_ordenada = ordenar_archivos(lista_files->files, 10);   //ordeno la lista segun VPN y dirvirtual
+    //for (int i=0; i<10; i+=1)
+    //{printf("soy el archivo %d mi vpn es: %d y mi dir virtual: %d\n", lista_ordenada[i].id, lista_ordenada[i].vpn, lista_ordenada[i].direccion_virtual);}
 
     lista_files->files = lista_ordenada; //la guardo para tenerla actualizada
 
@@ -841,6 +854,9 @@ lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* list
     for (int i=0; i<10; i+=1)
       {
         elemento = lista_files->files[i]; //obtengo el archivo
+        if (elemento.id != 0 || elemento.vpn != 0 || elemento.direccion_virtual !=0 ) //solo considero las entradas validas
+        {
+
         if (pag_actual == -1 || restante == ESPACIO_PAGINA) //si es el primer archivo o estoy al inicio de una pagina
         {   pag_actual = elemento.vpn; //actualizo la pagina
 
@@ -928,7 +944,7 @@ lista_archivos* ordenar_archivos_proceso(int process_id, lista_direcciones* list
                 
               } 
            }
-      }
+    }}
 
     continue;
     }
@@ -949,7 +965,7 @@ int main(int argc, char **argv)
   // printf("\n");
   // printf("-------Ejecutando la funcion cr_mount-------\n");
   // printf("\n");
-  // cr_mount(filename);
+  cr_mount(filename);
   // printf("\n");
   // printf("-------Ejecutando la funcion cr_ls_processes--------\n");
   // printf("\n");
@@ -957,7 +973,7 @@ int main(int argc, char **argv)
   // printf("\n");
   // printf("\n");
   // printf("-------Ejecutando la funcion cr_ls_files-----------\n");
-  // cr_ls_files(200);
+  cr_ls_files(200);
   // printf("-------Ejecutando la funcion cr_exists-----------\n");
   // printf("\n");
   // int existe = cr_exists(200, "greatcat.mp4");
@@ -978,8 +994,9 @@ int main(int argc, char **argv)
   // cr_ls_files(200);
   // printf("-------Ejecutando la funcion cr_open-----------\n");
   // CrmsFile * archivo = cr_open(200, "hecomes.mp4", 'r');
-  print_page_table(filename);
-  print_frame_bitmap(filename);
+  //print_page_table(filename);
+  //print_frame_bitmap(filename);
+  ordenar_archivos_proceso(200);
   /* liberar_memoria_archivo(archivo); */
 }
 
