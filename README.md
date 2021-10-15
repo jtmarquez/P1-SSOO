@@ -13,7 +13,7 @@ Grupo: SegmentationFault
 ## Como correr la tarea?
 
 1. ```make```
-2. .```/crms <nombre archivo memoria>```
+2. ```./crms <nombre archivo memoria>```
 
 ## Decisiones de diseño
 
