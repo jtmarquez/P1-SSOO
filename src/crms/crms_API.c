@@ -415,26 +415,28 @@ void cr_finish_process(int process_id)
                 bytes[j] = buffer[i+31+k+j];
               };
               int vpn = obtener_VPN(bytes[0], bytes[1]);
-              printf("VPN %d\n", vpn);
+              //printf("VPN %d\n", vpn);
               unsigned char byte_tabla = buffer[i+224+vpn];
-              printf("byte %d\n", byte_tabla);
+              //printf("byte %d\n", byte_tabla);
               int pfn = (byte_tabla >> 1);
               int validation = (byte_tabla >> 0) & 0x01;
-              printf("validation %d\n" , validation);
+              //printf("validation %d\n" , validation);
               unsigned char byte_write_table = byte_tabla & (!(0x01 << 0));
+              int byte_write_table_int = (int)byte_write_table;
               fseek(memory_file, (i+224+vpn)*sizeof(char),SEEK_SET);
-              fwrite(&byte_write_table, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
-              printf("pfn %d\n", pfn);
+              fwrite(&byte_write_table_int, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
+              //printf("pfn %d\n", pfn);
               int byte_bitmap = floor(pfn/8);
-              printf("byte index %d\n", byte_bitmap);
+              //printf("byte index %d\n", byte_bitmap);
               unsigned char byte = buffer[byte_bitmap+4096];
-              printf("byte %u\n", byte);
+              //printf("byte %d\n", byte);
               int dif = pfn - byte_bitmap*8;
-              printf("dif %u\n", dif);
+              //printf("dif %u\n", dif);
               unsigned char byte_write_bitmap = byte & (!(0x01 << dif));
-              printf("byte write %u\n", byte_write_bitmap);
+              int byte_write_bitmap_int = (int)byte_write_bitmap;
+              //printf("byte write %d\n", byte_write_bitmap);
               fseek(memory_file, (byte_bitmap+4096)*sizeof(char),SEEK_SET);
-              fwrite(&byte_write_bitmap, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
+              fwrite(&byte_write_bitmap_int, sizeof(char), 1, memory_file); //cambio byte con nuevo bit de validez
             };
           }
         }
