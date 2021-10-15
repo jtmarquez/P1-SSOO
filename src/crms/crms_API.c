@@ -1088,7 +1088,7 @@ int liberar_memoria_archivo(CrmsFile * archivo) {
 
 void cr_close(CrmsFile* file_desc){
     if (file_desc){
-        free(file_desc);
+        liberar_memoria_archivo(file_desc);
         printf("file closed\n");
     }
     else {
@@ -1156,55 +1156,11 @@ int main(int argc, char **argv)
   input_name = argv[1];
   filename = input_name;
   cr_mount(filename);
-  print_page_table(filename);
-  print_frame_bitmap(filename);
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_mount-------\n");
-  printf("\n");
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_ls_processes--------\n");
-  printf("\n");
-  cr_ls_processes();
-  printf("\n");
-  printf("\n");
-  printf("-------Ejecutando la funcion cr_ls_files-----------\n");
-  cr_ls_files(200);
-  printf("-------Ejecutando la funcion cr_exists-----------\n");
-  printf("\n");
-  int existe = cr_exists(200, "bichota.mp4");
-  if (existe){printf("si existe\n");}
-  else{printf("no existe\n");}
-  printf("\n");
-  print_memory(filename);
-  printf("-------Ejecutando la funcion cr_start-----------\n");
-  printf("\n");
-  cr_start_process(2, "test1");
-  printf("\n");
-  cr_mount(filename);
-  print_memory(filename);
-  printf("-------Ejecutando la funcion cr_finish-----------\n");
-  printf("\n");
-  cr_finish_process(2);
-  cr_mount(filename);
-  cr_finish_process(28);
-  cr_mount(filename);
-  print_memory(filename);
-  cr_ls_files(200);
-  printf("-------Ejecutando la funcion cr_open------------\n");
   CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
-  lista_archivos* lista_resultado = ordenar_archivos_proceso(4);
-  int tamano = 0;
-  // for (int i=0; i<10; i+=1){
-  //   archivo elemento = lista_resultado->files[i];
-  //   if (elemento.validez == 1){
-  //     printf("[valido: %d] | [archivo: %d] | [vpn: %d] | [dir_virtual: %d] | [tamaño: %d] |[pag_inicio: %d] | [pag_fin: %d]\n",
-  //    elemento.validez, elemento.id, elemento.vpn, elemento.direccion_virtual, elemento.size, elemento.pagina_inicio, elemento.pagina_final );
-  //     tamano += elemento.size;
-  //   }
-  // }
-  printf("tamaño %d\n", tamano);
-  liberar_memoria_archivo(archivo);
+  cr_delete_file(archivo);
+  cr_close(archivo);
   fclose(memory_file);
-  free(variable_a_hacer_free);
+  //liberar_memoria_archivo(archivo);
+  //free(variable_a_hacer_free);
 }
 
