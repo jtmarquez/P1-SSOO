@@ -749,10 +749,11 @@ void guardar_bit_validez(CrmsFile * archivo, int idx_subentrada_archivo, int vpn
 void write_dir_vir_to_file(unsigned char * dir_vir, int idx_entrada_archivo){
 
   fseek(memory_file, idx_entrada_archivo + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO, SEEK_SET);
-
-  for (int i = 0; i < TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO; i++)
+  int temp;
+  for (int i = 0; i < TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; i++)
   {
-    fwrite(&dir_vir[i], sizeof(char), 1, memory_file);
+    temp = (int)dir_vir[i];
+    fwrite(&temp, sizeof(int), 1, memory_file);
   }
   fclose(memory_file);
 }
@@ -862,15 +863,9 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
       // falta escribir a archivo la dirección virtual
       //
       write_dir_vir_to_file(archivo ->dir_virtual, idx_primer_indice_libre);
-
-      /* fseek(memory_file, idx_primer_indice_libre + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO, SEEK_SET);
-      unsigned char dir_try[4];
-      fread(&dir_try, 4 * sizeof(unsigned char), 1, memory_file);
-      printf("try2%x/n", archivo ->dir_virtual);
-      printf("try1%x/n", dir_try);
-      unsigned char tryu = obtener_VPN(dir_try[0], dir_try[1]);
-      printf("Archivo VPN "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(tryu)); */
-
+      
+      fseek(memory_file, idx_primer_indice_libre + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO, SEEK_SET);
+      
       guardar_bit_validez(archivo, idx_subentrada, vpn_int, idx_proceso, (int) pfn);
       fread(buffer,sizeof(buffer),1,memory_file); // read 10 bytes to our buffer*/
       printf("Se creó exitosamente el archivo con nombre %s\n", archivo ->nombre);
