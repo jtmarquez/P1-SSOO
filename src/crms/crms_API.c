@@ -153,8 +153,6 @@ int cr_exists(int process_id, char *file_name)
 //Funcion para listar los archivos dentro de la memoria del proceso.
 //Imprime en pantalla los nombres de todos los archivos presentes en
 //la memoria del proceso con id process id.
-
-
 unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_dir_virtual){
   unsigned char p5 = (pos_0_dir_virtual >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
   unsigned char p51;
@@ -520,43 +518,6 @@ int obtener_offset_archivo(unsigned char *bytes)
   return offset;
 }
 
-unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_dir_virtual){
-  unsigned char p5 = (pos_0_dir_virtual >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
-  unsigned char p51;
-  unsigned char p9 = (pos_1_dir_virtual >> 7) & 0x1;
-  unsigned char mask = (1 << 7) - 0x01;
-  if (p5) {
-    p51 = p5 | (0x01 << 4);
-  } else {
-    p51 = p5 & (!(0x01 << 4));
-  }
-  unsigned char p6 = (pos_0_dir_virtual >> 2) & 0x1; // segundo digito
-  if (p6) {
-    p51 = p51 | (0x01 << 3);
-  } else {
-    p51 = p51 & (!(0x01 << 3));
-  }
-  unsigned char p7 = (pos_0_dir_virtual >> 1) & 0x1;; // tercer digito
-  if (p7) {
-    p51 = p51 | (0x01 << 2);
-  } else {
-    p51 = p51 & (!(0x01 << 2));
-  }
-  unsigned char p8 = (pos_0_dir_virtual >> 0) & 0x1;; // cuarto digito
-  if (p8) {
-    p51 = p51 | (0x01 << 1);
-  } else {
-    p51 = p51 & (!(0x01 << 1));
-  }
-  if (p9){
-    p51 = p51 | (0x01); // remplazar por 1
-  } else {
-    p51 = p51 & (0xFE); // reemplazar por 0
-  }
-
-  return p51;
-}
-
 unsigned char get_last_n_bits(unsigned char byte, int n){
   // queremos obtener los 7 últimos bits.
   unsigned char mask = (1 << n) - 0x01;
@@ -730,7 +691,7 @@ void print_memory(char* filename){
       cont += sum;
       num += 1;
     }
-    /* printf("%d", buffer[i]); */
+    printf("%d", buffer[i]);
   }
 }
 
@@ -1233,14 +1194,14 @@ int main(int argc, char **argv)
   CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
   lista_archivos* lista_resultado = ordenar_archivos_proceso(4);
   int tamano = 0;
-  for (int i=0; i<10; i+=1){
-    archivo elemento = lista_resultado->files[i];
-    if (elemento.validez == 1){
-      printf("[valido: %d] | [archivo: %d] | [vpn: %d] | [dir_virtual: %d] | [tamaño: %d] |[pag_inicio: %d] | [pag_fin: %d]\n",
-     elemento.validez, elemento.id, elemento.vpn, elemento.direccion_virtual, elemento.size, elemento.pagina_inicio, elemento.pagina_final );
-      tamano += elemento.size;
-    }
-  }
+  // for (int i=0; i<10; i+=1){
+  //   archivo elemento = lista_resultado->files[i];
+  //   if (elemento.validez == 1){
+  //     printf("[valido: %d] | [archivo: %d] | [vpn: %d] | [dir_virtual: %d] | [tamaño: %d] |[pag_inicio: %d] | [pag_fin: %d]\n",
+  //    elemento.validez, elemento.id, elemento.vpn, elemento.direccion_virtual, elemento.size, elemento.pagina_inicio, elemento.pagina_final );
+  //     tamano += elemento.size;
+  //   }
+  // }
   printf("tamaño %d\n", tamano);
   liberar_memoria_archivo(archivo);
   fclose(memory_file);
