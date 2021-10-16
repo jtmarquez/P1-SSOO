@@ -43,6 +43,7 @@ typedef struct Archivos
     unsigned char * dir_fisica;
     int dir_virtual_int;
     int bytes_leidos;
+    
 }CrmsFile;
 
 typedef struct Proceso
