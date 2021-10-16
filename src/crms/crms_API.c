@@ -1100,7 +1100,7 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
 {
   fseek(memory_file, 0 ,SEEK_SET);
   fread(buffer,sizeof(buffer),1,memory_file);
-  printf("helloooo\n");
+  // printf("helloooo\n");
   lista_archivos* lista = ordenar_archivos_proceso(file_desc->id_proceso);
   int indice_lista = 0;
   int file_existe = 0;
@@ -1127,7 +1127,7 @@ int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
     //   printf("Holaaaaa\n");
     // }
   }
-  printf("Tmano: %i\n", lista->files[indice_lista].size);
+  // printf("Tmano: %i\n", lista->files[indice_lista].size);
   // Reviso si el archivo está valido
   if (lista->files[indice_lista].validez == 0)
   {
@@ -1208,25 +1208,9 @@ int main(int argc, char **argv)
   cr_ls_files(27);
   // lista_archivos* lista = ordenar_archivos_proceso(27);
   
-  // for (int i = 0; i < 10; i++)
-  // {
-  //   printf(" size %i\n;", lista->files[i].size);
-  // }
-  
-  
   CrmsFile * archivo = cr_open(200, "greatcats.mp4", 'r');
   // CrmsFile * archivo_2 = cr_open(27, "knowledg.jpg", 'r');
   // unsigned char *buffer_p = calloc(1000, sizeof(char));
-  
-
-  
-  //int bytes_leidos = cr_read(archivo_2, buffer_p, 1000);
-  // printf("byte %i\n", bytes_leidos);
-
-  // for (int i = 0; i < 1000; i++)
-  // {
-  //   printf("loloolll %i\n", buffer_p[i]);
-  // }
 
   cr_delete_file(archivo);
   cr_close(archivo);
