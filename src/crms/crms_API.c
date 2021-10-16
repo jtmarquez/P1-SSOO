@@ -773,7 +773,7 @@ void cr_delete_file(CrmsFile* file_desc)
     int solo = 1;
     lista_archivos* lista_resultado = ordenar_archivos_proceso(file_desc->id_proceso); //busco una lista ordenada de todos los archivos del proceso
     archivo elemento;
-    for (int i; i<10; i+=1)
+    for (int i=0; i<10; i+=1)
     {
       if (lista_resultado->files[i].vpn == file_desc->vpn & lista_resultado->files[i].direccion_virtual == file_desc->dir_virtual_int) //si es el archivo que busco
       {
@@ -948,7 +948,7 @@ CrmsFile * cr_open(int process_id, char * file_name, char mode){
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
   archivo -> creado = 1;
   if (strlen(file_name) > TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO) {
-    printf("Error: El nombre de archivo ingresado supera los 12 bytes");
+    printf("Error: El nombre de archivo ingresado supera los 12 bytes\n");
     archivo ->creado = 0;
     return archivo;
   }
@@ -1096,57 +1096,105 @@ void cr_close(CrmsFile* file_desc){
     }
 }
 
-// int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
-// {
-//   unsigned char *inicio;
-//   unsigned char *bytes;
-//   FILE *archivo = fopen(file_desc->nombre, "r");
+int cr_read(CrmsFile *file_desc, void *p_buffer, int n_bytes)
+{
+  fseek(memory_file, 0 ,SEEK_SET);
+  fread(buffer,sizeof(buffer),1,memory_file);
+  printf("helloooo\n");
+  lista_archivos* lista = ordenar_archivos_proceso(file_desc->id_proceso);
+  int indice_lista = 0;
+  int file_existe = 0;
+  int archivo_valido = 0;
+  // FILE *archivo = fopen(file_desc->nombre, "r");
+  int bytes_ya_leidos = 0;
+  unsigned char info[n_bytes];
+  int indice_bytes = 0;
+  int indice = 4096 + 16 + lista->files[indice_lista].pos_relativa + 1;
   
-//   // No necesariamente esta en el numero n_frames por tamaño, puede que parta en la mitad de otro
-//   float n_frames = (float) file_desc->tamano / (float)2048;
+  // printf("Holaaaaa\n");
+  
 
-//   fseek(memory_file, /* llegar al inicio del frame_inicial del archivo (saltarte el bitmap y todas esas tonteras (pcb) y el pfn del frame inicial)*/, SEEK_SET);
+  // buscar archivo en lista_archivos
+  for (int i = 0; i < 10; i++)
+  {
+    if (lista->files[i].vpn == (int)file_desc->vpn && lista->files[i].direccion_virtual == (int)file_desc->dir_virtual)
+    {
+      indice_lista = i;
+    }
+    // else
+    // {
+    //   int file_existe = 1;
+    //   printf("Holaaaaa\n");
+    // }
+  }
+  printf("Tmano: %i\n", lista->files[indice_lista].size);
+  // Reviso si el archivo está valido
+  if (lista->files[indice_lista].validez == 0)
+  {
+    int archivo_valido = 1;
+  }
 
-//   if (file_desc->tamano < n_bytes * /* bytes*/)
-//   {
-//     /* Revisa que los bytes a leer sean menor a los del archivo, 
-//       si no cambia el valor de bytes a leer por el tamaño del archivo */
-//     n_bytes = file_desc->tamano;
-//   }
+  int frames = (lista->files[indice_lista].pagina_final - lista->files[indice_lista].pagina_inicio);
+  int contador_frames = 0;
+  int pagina_actual = lista->files[indice_lista].pagina_inicio;
+  int bytes_pagina = 0;
 
-//   if (file_desc->bytes_leidos != 0)
-//   {
-//     /* mover puntero n bytes*/
-//     for (int i = 0; i < file_desc->bytes_leidos; i++)
-//     {
-//       if (/* paso al siguiente fram */)
-//       {
-//         fseek(memory_file, /* saltar a sig frame */, SEEK_CUR);
-//       }
-//       fseek(memory_file, 1, SEEK_CUR);
-//     }
-//   }
+  // Si el archivo es valido
+  if (!archivo_valido && !file_existe)
+  {
+    // Si el tamaño del archivo es menor a los bytes cambiar valor
+    if ((int)file_desc->tamano - file_desc->bytes_leidos < n_bytes)
+    {
+      n_bytes = (int)file_desc->tamano;
+    }
+  
+    // Si ya se han leido bytes de ese archivo
+    if (file_desc->bytes_leidos != 0)
+    {
+      /* mover puntero n bytes*/
+      for (int i = 0; i < file_desc->bytes_leidos; i++)
+      {
+        // Pasa al siguiente frame
+        if ((pagina_actual*8388608 - (int)file_desc->dir_virtual == bytes_pagina) && contador_frames != frames)
+        {
+          indice++;
+          contador_frames++;
+          bytes_pagina = 0;
+        }
+        indice++;
+        bytes_pagina++;
+      }
+    }
 
-//   int bytes_ya_leidos = 0;
-
-//   for (int i = 0; i < n_bytes; i++)
-//   {
-//     /* code */
-//     if (/* pasa a siguiente frame */)
-//     {
-//       fseek(memory_file, /* saltar al inicio del sig frame, saltarse pfn*/, SEEK_CUR);
-//     }
-//     if (/* termino archivo */)
-//     {
-//       break;
-//     }
-//     fseek(memory_file, 1, SEEK_CUR);
-//     fread(p_buffer, 1, 1, memory_file);
-//     bytes_ya_leidos++;
-//   }
-
-//   return bytes_ya_leidos;
-// }
+    for (int i = 0; i < n_bytes; i++)
+    {
+      // Pasa al siguiente frame
+      if ((pagina_actual*8388608 - (int)file_desc->dir_virtual == bytes_pagina) && contador_frames != frames)
+      {
+        indice++;
+        contador_frames++;
+        bytes_pagina = 0;
+      }
+      // Si el archivo termino
+      if ((int)file_desc->tamano == file_desc->bytes_leidos + bytes_ya_leidos)
+      {
+        break;
+      }
+      // 
+      info[indice_bytes] = buffer[indice];
+      indice_bytes++;
+      bytes_ya_leidos++;
+      indice++;
+      bytes_pagina++;
+    }
+  }
+  else{
+    printf("El archivo no es válido");
+  }
+  p_buffer = info;
+  file_desc->bytes_leidos = file_desc->bytes_leidos + bytes_ya_leidos;
+  return bytes_ya_leidos;
+}
 
 
 int main(int argc, char **argv)
@@ -1156,7 +1204,30 @@ int main(int argc, char **argv)
   input_name = argv[1];
   filename = input_name;
   cr_mount(filename);
-  CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
+  cr_ls_processes();
+  cr_ls_files(27);
+  // lista_archivos* lista = ordenar_archivos_proceso(27);
+  
+  // for (int i = 0; i < 10; i++)
+  // {
+  //   printf(" size %i\n;", lista->files[i].size);
+  // }
+  
+  
+  CrmsFile * archivo = cr_open(200, "greatcats.mp4", 'r');
+  // CrmsFile * archivo_2 = cr_open(27, "knowledg.jpg", 'r');
+  // unsigned char *buffer_p = calloc(1000, sizeof(char));
+  
+
+  
+  //int bytes_leidos = cr_read(archivo_2, buffer_p, 1000);
+  // printf("byte %i\n", bytes_leidos);
+
+  // for (int i = 0; i < 1000; i++)
+  // {
+  //   printf("loloolll %i\n", buffer_p[i]);
+  // }
+
   cr_delete_file(archivo);
   cr_close(archivo);
   fclose(memory_file);
