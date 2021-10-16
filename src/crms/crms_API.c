@@ -68,7 +68,7 @@ archivo* ordenar_archivos(archivo* lista_files, int N)
     memory_local_path = memory_path;
     memory_file = malloc(sizeof(FILE));
     variable_a_hacer_free = memory_file;
-    memory_file[0] = *(fopen(memory_path,"rb+"));
+    memory_file = (fopen(memory_path,"rb+"));
     // memory_file = (fopen(memory_path,"rb+"));
   }
 
@@ -104,8 +104,8 @@ int cr_exists(int process_id, char *file_name)
 
   fseek(memory_file, 0, SEEK_SET);
   fread(buffer, sizeof(buffer), 1, memory_file);
-  int cont = 0;
-  int sum = 256;
+  /* int cont = 0;
+  int sum = 256; */
 
   int existe = 0;
 
@@ -157,7 +157,7 @@ unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_d
   unsigned char p5 = (pos_0_dir_virtual >> 3) & 0x1; // primer digito  (Byte >> x) AND 0x01
   unsigned char p51;
   unsigned char p9 = (pos_1_dir_virtual >> 7) & 0x1;
-  unsigned char mask = (1 << 7) - 0x01;
+  /* unsigned char mask = (1 << 7) - 0x01; */
   if (p5) {
     p51 = p5 | (0x01 << 4);
   } else {
@@ -192,7 +192,7 @@ unsigned char obtener_VPN(unsigned char pos_0_dir_virtual, unsigned char pos_1_d
 lista_archivos* ordenar_archivos_proceso(int process_id)
 {
   fseek(memory_file, 0 ,SEEK_SET); //me paro al inicio de la memoria
-  fread(buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
+  fread(&buffer,sizeof(buffer),1,memory_file); //cargo la informacion del archivo en un buffer
   int cont = 0;
   int pos = 0;
   lista_archivos* lista_files= calloc(1, sizeof(lista_archivos)); //pido espacio para la lista de archivos
@@ -200,10 +200,10 @@ lista_archivos* ordenar_archivos_proceso(int process_id)
 
   for (int k=0; k<15; k+=1) //for que recorre los 16 procesos
   {
-    if (buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id & buffer[(k*TAMANO_ENTRADA_PCB)] == 1) //si es el proceso que busco y es valido
+    if ((buffer[(k*TAMANO_ENTRADA_PCB) + 1] == process_id) && (buffer[(k*TAMANO_ENTRADA_PCB)] == 1)) //si es el proceso que busco y es valido
     {
       for (int i=0; i<10; i+=1 ) //recorro los distintos archivos
-    {
+      {
       // explicacion de indice: k*TAMANO_ENTRADA_PCB + 14 + i * TAMANO_SUBENTRADA_PCB:
       //- k*TAMANO_ENTRADA_PCB: se posiciona en el bit de validez del proceso
       // - 14 por primeros 14 bytes antes de subentradas de archivos
@@ -213,7 +213,7 @@ lista_archivos* ordenar_archivos_proceso(int process_id)
         unsigned char dir_virtual_buff[4]; //direccion virtual de 4 bytes
         for (int j=0; j<4; j+=1){dir_virtual_buff[j] = buffer[k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB + j + 17];} //guardo los 4 bytes de dir virtual
         //creo struct para el archivo
-        archivo* file = calloc(1, sizeof(archivo)); //archivo
+        archivo* file = calloc(1, sizeof(archivo)); //archivo 
         file->pos_relativa = (k*TAMANO_ENTRADA_PCB+ 14+i*TAMANO_SUBENTRADA_PCB);
         //obtengo vpn
         unsigned char vpn= obtener_VPN(dir_virtual_buff[0], dir_virtual_buff[1]);
@@ -569,12 +569,7 @@ int guardar_info_subentrada_a_struct(CrmsFile * archivo, int j){
   {
     archivo->tamano[dir_counter] = buffer[k + 1];
   }
-  unsigned int size = archivo->tamano[3] | (archivo->tamano[2] << 8) | (archivo->tamano[1] << 16) | (archivo->tamano[0] << 24);
-  /* unsigned int l1 = bswap_32(archivo ->tamano); */
-  /* printf("%u||||\n", size);
-  printf("%u||!!!\n", l1); */
-  /* printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(size));
-  printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(l1)); */
+  /* unsigned int size = archivo->tamano[3] | (archivo->tamano[2] << 8) | (archivo->tamano[1] << 16) | (archivo->tamano[0] << 24); */
   archivo -> dir_virtual_int = convert_dir_vir_to_int(archivo -> dir_virtual);
   return 1;
 }
@@ -600,9 +595,7 @@ int obtener_dir_virtual_new_file(int idx_proceso, int idx_primer_indice_libre)
   unsigned char entrada_tabla_paginas;
   fread(&entrada_tabla_paginas, sizeof(unsigned char), 1, memory_file);
   printf("%c, %x\n", entrada_tabla_paginas, entrada_tabla_paginas);
-  /* printf("%x|\n", bswap_32(entrada_tabla_paginas)); */
-  /* if (!is_bigendian) entrada_tabla_paginas = bswap_32(entrada_tabla_paginas); */
-  /* printf("%x||\n", (bswap_32(entrada_tabla_paginas) >> 7) & 0x01); */
+
 
   fseek(memory_file, 0, SEEK_SET);
 
@@ -646,7 +639,7 @@ void cr_finish_process(int process_id)
               unsigned char byte_tabla = buffer[i+224+vpn];
               //printf("byte %d\n", byte_tabla);
               int pfn = (byte_tabla >> 1);
-              int validation = (byte_tabla >> 0) & 0x01;
+              /* int validation = (byte_tabla >> 0) & 0x01; */
               //printf("validation %d\n" , validation);
               unsigned char byte_write_table = byte_tabla & (!(0x01 << 0));
               int byte_write_table_int = (int)byte_write_table;
@@ -702,14 +695,13 @@ void print_page_table(char* filename){
   int inicio = 224;
   int cont = 224;
   int sum = 256;
-  int num = 0;
   for (int j = 0; j < 16; j += 1)
   {
     /* printf("\n [Proceso %d] \n", j); */
     for(int i = (inicio + j*sum); i < (inicio + 32+ j*sum); i++){
   
     int pfn = 0;
-    int validation = ((buffer[i] >> 0) & 1) !=0; //primer bit
+    /* int validation = ((buffer[i] >> 0) & 1) !=0; //primer bit */
     pfn += ((buffer[i] >> 7) & 1)*pow(2,0);
     pfn += ((buffer[i] >> 6) & 1)*pow(2,1);
     pfn += ((buffer[i] >> 5) & 1)*pow(2,2);
@@ -740,21 +732,21 @@ void print_frame_bitmap(char* filename){
       cont += 1;
       num += 1;
     }
-    int bit0 =  ((buffer[i] >> 0) & 1) !=0; //primer bit
+    /* int bit0 =  ((buffer[i] >> 0) & 1) !=0; //primer bit */
     /* printf("bit0 %d\n", bit0); */
-    int bit1 = ((buffer[i] >> 7) & 1)!=0;
+    /* int bit1 = ((buffer[i] >> 7) & 1)!=0; */
     /* printf("bit1 %d\n", bit1); */
-    int bit2 = ((buffer[i] >> 6) & 1)!=0;
+    /* int bit2 = ((buffer[i] >> 6) & 1)!=0; */
     /* printf("bit2 %d\n", bit2); */
-    int bit3 =  ((buffer[i] >> 5) & 1)!=0;
+    /* int bit3 =  ((buffer[i] >> 5) & 1)!=0; */
     /* printf("bit3 %d\n", bit3); */
-    int bit4 = ((buffer[i] >> 4) & 1)!=0;
+    /* int bit4 = ((buffer[i] >> 4) & 1)!=0; */
     /* printf("bit4 %d\n", bit4); */
-    int bit5 =  ((buffer[i] >> 3) & 1)!=0;
+    /* int bit5 =  ((buffer[i] >> 3) & 1)!=0; */
     /* printf("bit5 %d\n", bit5); */
-    int bit6 =  ((buffer[i] >> 2) & 1)!=0;
+    /* int bit6 =  ((buffer[i] >> 2) & 1)!=0; */
     /* printf("bit6 %d\n", bit6); */
-    int bit7 =  ((buffer[i] >> 1) & 1)!=0;
+    /* int bit7 =  ((buffer[i] >> 1) & 1)!=0; */
     /* printf("bit7 %d\n", bit7); */
   }
 }
@@ -773,9 +765,9 @@ void cr_delete_file(CrmsFile* file_desc)
     int solo = 1;
     lista_archivos* lista_resultado = ordenar_archivos_proceso(file_desc->id_proceso); //busco una lista ordenada de todos los archivos del proceso
     archivo elemento;
-    for (int i; i<10; i+=1)
+    for (int i = 0; i<10; i+=1)
     {
-      if (lista_resultado->files[i].vpn == file_desc->vpn & lista_resultado->files[i].direccion_virtual == file_desc->dir_virtual_int) //si es el archivo que busco
+      if (/* lista_resultado ->files[i] &&  */(lista_resultado->files[i].vpn == file_desc->vpn) && (lista_resultado->files[i].direccion_virtual == file_desc->dir_virtual_int)) //si es el archivo que busco
       {
         elemento = lista_resultado->files[i]; //el archivo que corresponde
         continue;
@@ -789,7 +781,7 @@ void cr_delete_file(CrmsFile* file_desc)
     //reviso si esta solo en la pagina
     for (int j=0; j<10; j+=1)
     {
-      if (lista_resultado->files[j].vpn == elemento.vpn & lista_resultado->files[j].id != elemento.id & elemento.validez==1) //si otro archivo esta en su misma pagina 
+      if (lista_resultado->files[j].vpn == elemento.vpn && lista_resultado->files[j].id != elemento.id && elemento.validez==1) //si otro archivo esta en su misma pagina 
       {
         solo = 0; //seteo la variable para decir que no esta sola
       }
@@ -802,12 +794,12 @@ void cr_delete_file(CrmsFile* file_desc)
 
          //invalido su bit en la tabla de pag de la memoria
         unsigned char byte_write = byte_tabla & (!(0x01 << 0));
-        int byte_write_int = (int) byte_write;
+        /* int byte_write_int = (int) byte_write; */
         fseek(memory_file, (224+elemento.vpn)*sizeof(char),SEEK_SET);
         fwrite(&byte_write, sizeof(char), 1, memory_file); 
          
         //invalido su bit en bitframe
-        unsigned char byte_frame = buffer[224+elemento.vpn]; //encuentro el byte con el pfn
+       /*  unsigned char byte_frame = buffer[224+elemento.vpn]; */ //encuentro el byte con el pfn
         int pfn = (byte_tabla >> 1); //pfn
         
         int byte_bitmap = floor(pfn/8);
@@ -819,6 +811,15 @@ void cr_delete_file(CrmsFile* file_desc)
 
       }
     printf("Archivo eliminado correctamente\n");
+    /* for (int i = 0; i < 10; i++)
+    {
+      if (lista_resultado ->files[i].){
+        free(&(lista_resultado ->files[i])
+      }
+    } */
+    
+    free(lista_resultado -> files);
+    free(lista_resultado);
   }
 
 void guardar_nombre_y_tamano_archivo(CrmsFile * archivo, int idx_primer_indice_libre){
@@ -865,16 +866,10 @@ unsigned char encontrar_vpn_ultimo_archivo_mas_1(int idx_primer_archivo_libre, i
     return 0x0;
   } else {
 
-    /* int limit = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO + TAMANO_SUBENTRADA_PCB_DIRECCION_VIRTUAL; */
     int base = ultimo_archivo_idx + TAMANO_SUBENTRADA_PCB_NOMBRE_ARCHIVO + TAMANO_SUBENTRADA_PCB_TAMANO_ARCHIVO;
     
     unsigned char vpn = obtener_VPN(buffer[base], buffer[base + 1]);
     return vpn + 0x01;
-    /* for (int i = base; i < limit; i++)
-    {
-      unsigned char vpn = obtener_VPN(buffer[i], buffer[i + 1]);
-      return vpn + 0x01;
-    } */
   }
 }
 unsigned char * get_direccion_virtual(unsigned char vpn, unsigned char offset){
@@ -942,7 +937,7 @@ void write_dir_vir_to_file(unsigned char * dir_vir, int idx_entrada_archivo){
     temp = (int)dir_vir[i];
     fwrite(&temp, sizeof(int), 1, memory_file);
   }
-  fclose(memory_file);
+  /* fclose(memory_file); */
 }
 CrmsFile * cr_open(int process_id, char * file_name, char mode){
   CrmsFile * archivo = malloc(sizeof(CrmsFile));
@@ -1156,11 +1151,13 @@ int main(int argc, char **argv)
   input_name = argv[1];
   filename = input_name;
   cr_mount(filename);
-  CrmsFile * archivo = cr_open(200, "bichota.mp4", 'w');
-  cr_delete_file(archivo);
+  cr_exists(200, "greatcat.mp4");
+  cr_ls_files(200);
+  CrmsFile * archivo = cr_open(200, "a.mp4", 'w');
+  /*   */
   cr_close(archivo);
   fclose(memory_file);
   //liberar_memoria_archivo(archivo);
-  //free(variable_a_hacer_free);
+  free(variable_a_hacer_free);
 }
 
