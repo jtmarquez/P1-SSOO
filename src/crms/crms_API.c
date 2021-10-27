@@ -410,7 +410,7 @@ void cr_ls_files(int process_id)
               {
                 for (int k = j; k <= j + 12; k++)
                 {
-                  printf("%c", buffer[k]);
+                  printf("%c", buffer[k + 1]);
                 }
                 printf("\n");
               }
@@ -1198,21 +1198,118 @@ int main(int argc, char **argv)
   printf("Hello P1!\n");
   char *input_name;
   input_name = argv[1];
+  if (!input_name || argc != 2) {
+    printf("Error: No se entrego ningún archivo\n");
+    exit(0);
+  }
   filename = input_name;
+  
+
+  // MAIN 1: FUNCIÓN CR_MOUNT
+
+  /* cr_mount(filename);
+  print_memory(filename); 
+  fclose(memory_file);
+  free(variable_a_hacer_free);
+  */
+  
+
+  
+  // MAIN 2: FUNCION CR_LS_PROCESSES, CR_EXISTS, CR_LS_FILES
+
+  /* cr_mount(filename);
+  cr_ls_processes();
+  char archivo_a_buscar[12] = {'p', 'o', 'p', 'c', 'o', 'r', 'n', '.', 'm', 'k', 'v'};
+  int exist = cr_exists(27, archivo_a_buscar);
+  // Existen en el archivo el proceso con id 0, 4, 9, 27, 28, 32, 200
+  if (exist)
+  {
+    printf("El archivo con nombre %s si existe en el proceso con id %d\n", archivo_a_buscar, 27);
+  }
+  else {
+    printf("El archivo no existe en ese proceso.\n");
+  }
+  cr_ls_files(27);
+  
+  fclose(memory_file);
+  free(variable_a_hacer_free); */
+  
+  
+  // MAIN 3: FUNCION CR_START_PROCESS
+
+  /* cr_mount(filename);
+  
+  int id_proceso_a_crear = 12;
+  char nombre_proceso[6] = {'d', 'o', 'b', 'r', 'o'};
+
+  cr_start_process(id_proceso_a_crear, nombre_proceso);
+  cr_ls_processes();
+
+  
+  fclose(memory_file);
+  free(variable_a_hacer_free); */
+
+  
+
+  // MAIN 4: FUNCION CR_FINISH_PROCESS
+  
+  /* cr_mount(filename);
+  
+  cr_ls_processes();
+  cr_finish_process(12); 
+  printf("----------- Terminamos el proceso XX -----------\n");
+
   cr_mount(filename);
   cr_ls_processes();
+
+  fclose(memory_file);
+  free(variable_a_hacer_free); */
+ 
+
+  // MAIN 5: FUNCION CR_OPEN Y CR_CLOSE
+  
+  cr_mount(filename);
+  CrmsFile * archivo = cr_open(200, "hola.mp4", 'w');
+  cr_close(archivo);
+
+  
   cr_ls_files(27);
+  CrmsFile * archivo_2 = cr_open(200, "greatcat.mp4", 'r');
+  
+  cr_close(archivo_2);
+
+  fclose(memory_file);
+  free(variable_a_hacer_free);
+
+
+  // MAIN 6: PRINT ESTRUCTURAS
+
+  /*
+  cr_mount(filename);
+
+  print_frame_bitmap(filename);
+  printf("-------------------\n");
+  print_page_table(filename);
+  printf("-------------------\n");
+  print_memory(filename);
+
+  fclose(memory_file);
+  free(variable_a_hacer_free);
+  */
+
+  /* cr_ls_processes();
+  cr_ls_files(27); */
   // lista_archivos* lista = ordenar_archivos_proceso(27);
   
-  CrmsFile * archivo = cr_open(200, "greatcats.mp4", 'r');
+  /* CrmsFile * archivo = cr_open(200, "test.mp4", 'w'); */
   // CrmsFile * archivo_2 = cr_open(27, "knowledg.jpg", 'r');
   // unsigned char *buffer_p = calloc(1000, sizeof(char));
 
   // cr_delete_file(archivo); 
 
-  cr_close(archivo);
-  fclose(memory_file);
+  /* cr_close(archivo); */
+  // fclose(memory_file);
   //liberar_memoria_archivo(archivo);
-  free(variable_a_hacer_free);
+  // free(variable_a_hacer_free);
 }
 
